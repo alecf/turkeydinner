@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="jquery.min.js"> </script>
+        <script src="shared.js"> </script>
+        <script src="popup.js"> </script>
+        <link rel="stylesheet" href="popup.css" type="text/css">
+    </head>
+    <body>
+        <div>Latest Webkit roll @ <span id="webkit-version"></span></div>
+        <button id="refresh-button">Refresh</button>
+        
+        <div>WebKit email: <input type="text" id="changelog-name">
+        </input></div>
+        <div id="feed-info">
+            <div id="pending-title">Pending: <span id="current-pending"></span></div>
+            <div id="landed-title">Landed: <span id="current-landed"></span></div>
+            <a id="feed-jump"></a>
+            <table id="checkin-table">
+                <tr id="chrome-status"></tr>
+                <tr id="feed-entries">
+                </tr>
+            </table>
+            <div id="entry-details"></div>
+        </div>
+    </body>
+</html>

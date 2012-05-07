@@ -1,0 +1,57 @@
+
+.landed {
+    background-color: #00ee00;
+}
+
+.pending {
+    background-color: #eeee00;
+}
+
+.author {
+    color: blue;
+}
+
+.entry-details {
+    display: none;
+}
+#checkin-table {
+    border-collapse: collapse;
+}
+
+#checkin-table td {
+    padding: 0px;
+    border: 1px solid #fff;
+    cursor: pointer;
+}
+
+#checkin-table td a {
+    display: block;
+}
+
+#checkin-table .mine {
+    border: 1px solid #111;
+}
+
+
+
+#checkin-table a {
+    min-width: 10px;
+}
+
+#feed-entries td:hover {
+    border: 1px solid #00e;
+}
+
+#chrome-status td {
+    text-align: right;
+}
+
+#entry-details {
+    height: 150px;
+    overflow: auto;
+    background-color: #ddd;
+}
+
+div.entry-details {
+    white-space: pre-wrap;
+}
