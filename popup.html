@@ -7,21 +7,29 @@
         <link rel="stylesheet" href="popup.css" type="text/css">
     </head>
     <body>
+        <div id="progress"></div>
         <div>Latest Webkit roll @ <span id="webkit-version"></span></div>
         <button id="refresh-button">Refresh</button>
         
         <div>WebKit email: <input type="text" id="changelog-name">
         </input></div>
+        <div>Chromium Review Nickname: <input type="text" id="review-nick">
+        </input></div>
         <div id="feed-info">
+            <div id="queued-title">Queued: <span id="current-queued"></span></div>
             <div id="pending-title">Pending: <span id="current-pending"></span></div>
             <div id="landed-title">Landed: <span id="current-landed"></span></div>
             <a id="feed-jump"></a>
-            <table id="checkin-table">
-                <tr id="chrome-status"></tr>
-                <tr id="feed-entries">
-                </tr>
-            </table>
-            <div id="entry-details"></div>
+            <div id="checkins">
+                <div id="checkin-table-wrap">
+                    <table id="checkin-table">
+                        <tr id="chrome-status"></tr>
+                        <tr id="feed-entries">
+                        </tr>
+                    </table>
+                </div>
+                <div id="entry-details"></div>
+            </div>
         </div>
     </body>
 </html>

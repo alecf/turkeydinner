@@ -5,18 +5,7 @@ feed = {
   rawdoc: null,
 };
 
-
-function refresh(version_callback, feed_callback) {
-  console.log("kicking off refresh...");
-  requestWebkitVersion(function(val) {
-    chrome.browserAction.setBadgeText({text: val});
-    chrome.browserAction.setTitle({title: "WebKit revision: " + val});
-    buildStatus['webkit_version'] = parseInt(val);
-    if (version_callback) {
-      version_callback(val);
-    }
-  });
-  requestWebkitFeed(function(doc) {
+function convert_feed(doc, callback) {
     feed.rawdoc = doc;
     var entries = [];
     $('entry', doc).each(function(i) {
@@ -56,10 +45,38 @@ function refresh(version_callback, feed_callback) {
       entries.push(entry);
     });
     feed.entries = entries;
-    if (feed_callback) {
-      feed_callback(feed);
+    if (callback) {
+      callback(feed);
     }
-  });
+}
+
+function refresh(email, version_callback, feed_callback, queue_callback) {
+    if (!email)
+        email = localStorage.getItem("email");
+    console.log("kicking off refresh...");
+    requestWebkitVersion(function(val) {
+        if (chrome.browserAction) {
+            chrome.browserAction.setBadgeText({text: val});
+            chrome.browserAction.setTitle({title: "WebKit revision: " + val});
+        }
+        buildStatus['webkit_version'] = parseInt(val);
+        if (version_callback) {
+            version_callback(val);
+        }
+    });
+    requestWebkitFeed(function(doc) {
+        convert_feed(doc, feed_callback);
+    });
+    if (email) {
+        requestQueuePositions(email, function(queue) {
+        buildStatus.queue = queue;
+        if (queue_callback) {
+            queue_callback(queue);
+        }
+        });
+    } else if (queue_callback) {
+        queue_callback([]);
+    }
 };
 
 refresh();

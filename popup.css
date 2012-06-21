@@ -14,11 +14,25 @@
 .entry-details {
     display: none;
 }
+
+#checkins {
+    position: relative;
+}
+
+#checkin-table-wrap {
+    width: 100%;
+    overflow: auto;
+}
+
+#progress {
+    float: right;
+}
+
 #checkin-table {
     border-collapse: collapse;
 }
 
-#checkin-table td {
+#checkin-table td a {
     padding: 0px;
     border: 1px solid #fff;
     cursor: pointer;
@@ -28,8 +42,8 @@
     display: block;
 }
 
-#checkin-table .mine {
-    border: 1px solid #111;
+#checkin-table .mine a {
+    border: 1px solid #333;
 }
 
 
@@ -38,7 +52,7 @@
     min-width: 10px;
 }
 
-#feed-entries td:hover {
+#feed-entries td:hover a {
     border: 1px solid #00e;
 }
 
