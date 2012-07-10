@@ -12,6 +12,7 @@
   
   "permissions": [
     "http://git.chromium.org/",
+    "http://codereview.chromium.org/",
     "http://webkit-commit-queue.appspot.com/"
   ]
 }

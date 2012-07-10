@@ -25,7 +25,7 @@ function requestWebkitVersion(callback) {
     xhr.send();
 }
 
-function requestGitFeed(url, callback) {
+function requestFeed(url, callback) {
   var xhr = new XMLHttpRequest();
   xhr.open('GET', url);
 
@@ -42,17 +42,36 @@ function requestGitFeed(url, callback) {
 
 }
 
+function requestChromiumList(nick, type, callback) {
+    requestFeed('http://codereview.chromium.org/rss/' + type + '/' + nick, function(doc) {
+        var result = [];
+
+        $('entry', doc).each(function (i, entry) {
+            console.log("Got entry ", i, ": ", entry);
+            var url = $('link', entry).attr('href');
+            var match = /\/(\d+)\//.exec(url);
+            if (match) {
+                var summary = $('summary', entry).text();
+                var info = { id: match[1], summary: summary };
+                result.push(info);
+            }
+
+        });
+
+    });
+}
+
 function requestChromiumFeed(callback) {
-  return requestGitFeed('http://git.chromium.org/gitweb/?p=chromium.git;a=atom;h=refs/heads/trunk', callback);
+  return requestFeed('http://git.chromium.org/gitweb/?p=chromium.git;a=atom;h=refs/heads/trunk', callback);
 }
 
 function requestWebkitFeed(callback) {
-  return requestGitFeed('http://git.chromium.org/gitweb/?p=external/WebKit_trimmed.git;a=atom;h=refs/heads/master', callback);
+  return requestFeed('http://git.chromium.org/gitweb/?p=external/WebKit_trimmed.git;a=atom;h=refs/heads/master', callback);
 }
 
 function requestBugzillaFeed(email, callback) {
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'https://bugs.webkit.org/buglist.cgi?bug_status=UNCONFIRMED&bug_status=NEW&bug_status=ASSIGNED&bug_status=REOPENED&emailassigned_to1=1&emailtype1=substring&email1=' + email + '&field0-0-0=flagtypes.name&type0-0-0=allwords&value0-0-0=commit-queue%2B&ctype=atom');
+    xhr.open('GET', 'https://bugs.webkit.org/buglist.cgi?bug_status=UNCONFIRMED&bug_status=NEW&bug_status=ASSIGNED&bug_status=REOPENED&emailassigned_to1=1&emailtype1=substring&email1=' + email + '&ctype=atom');
     xhr.onreadystatechange = function() {
         if (xhr.readyState == 4) {
             console.log("Have bugzilla feed.");
@@ -106,7 +125,6 @@ function requestBugzillaList(email, callback) {
                 });
             }
         });
-        console.log("Exiting with pending = ", pending);
         // if there aren't any entries, pending will never have
         // incremented
         if (!pending) {
@@ -155,7 +173,7 @@ function maybeRun(bugList, queueList, callback) {
                 if (patch.id == entry.patch) {
                     var minutes;
                     var time;
-                    if (entry.time && (minutes = /(\d+) minutes ago/)) {
+                    if (entry.time && (minutes = /(\d+) minutes ago/.exec(entry.time))) {
                         console.log("Making date out of ", minutes);
                         time = new Date(Date.now() - parseInt(minutes[1]) * 60 * 1000).toLocaleTimeString();
                     }

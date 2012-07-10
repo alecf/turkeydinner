@@ -50,9 +50,12 @@ function convert_feed(doc, callback) {
     }
 }
 
-function refresh(email, version_callback, feed_callback, queue_callback) {
+function refresh(email, review_nick, version_callback, feed_callback, queue_callback) {
     if (!email)
         email = localStorage.getItem("email");
+    if (!review_nick)
+        review_nick = localStorage.getItem("review-nick");
+
     console.log("kicking off refresh...");
     requestWebkitVersion(function(val) {
         if (chrome.browserAction) {
@@ -76,6 +79,10 @@ function refresh(email, version_callback, feed_callback, queue_callback) {
         });
     } else if (queue_callback) {
         queue_callback([]);
+    }
+
+    if (review_nick) {
+
     }
 };
 

@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
         refreshProgress();
         console.log("I'd like to refresh with ", chrome.browserAction);
         backgroundPage.refresh(localStorage.getItem("email"),
+                               localStorage.getItem("review-nick"),
                                update, setEntries, setQueued);
     };
 
@@ -25,6 +26,12 @@ document.addEventListener('DOMContentLoaded', function() {
     nameInput.val(localStorage.getItem("email"));
     nameInput.bind('change', function(e) {
         localStorage.setItem("email", $(this).val().trim());
+    });
+
+    var nickInput = $('#review-nick');
+    nickInput.val(localStorage.getItem("review-nick"));
+    nickInput.bind('change', function(e) {
+        localStorage.setItem("review-nick", $(this).val().trim());
     });
 });
 
@@ -167,6 +174,7 @@ function setEntries(feed) {
                 .addClass('landed')
                     .text(entry.bug).appendTo(currentLandedDiv);
         });
+        $('#landed-title').show();
     } else {
         $('#landed-title').hide();
     }
@@ -194,6 +202,7 @@ function setEntries(feed) {
                 .addClass('pending')
                     .text(entry.bug).appendTo(currentPendingDiv);
         });
+        $('#pending-title').show();
     } else {
         $('#pending-title').hide();
     }
