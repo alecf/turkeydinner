@@ -5,7 +5,7 @@ window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL ||
     window.webkitResolveLocalFileSystemURL;
 
 document.addEventListener('DOMContentLoaded', function() {
-    update(backgroundPage.buildStatus.webkit_version);
+    updateWebkitVersion(backgroundPage.buildStatus.webkit_version);
 
     setQueued(backgroundPage.buildStatus.queue);
 
@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log("I'd like to refresh with ", chrome.browserAction);
         backgroundPage.refresh(localStorage.getItem("email"),
                                localStorage.getItem("review-nick"),
-                               update, setEntries, setQueued);
+                               updateWebkitVersion, setEntries, setQueued);
     };
 
     var nameInput = $('#changelog-name');
@@ -35,6 +35,23 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+function updateVersionBehind() {
+    if (!haveVersion || !haveEntries)
+        return;
+    
+    var behindCount = 0;
+    var currentRollVersion = backgroundPage.buildStatus.webkit_version;
+    console.log("Updating from feed ", backgroundPage.feed, 
+                " against svn version ", currentRollVersion);
+    backgroundPage.feed.entries.forEach(
+        function(entry, i) {
+            if (entry.svn_id > currentRollVersion)
+                behindCount++;
+        });
+    
+    $('#webkit-behind').text("(behind " + behindCount + ")");
+}
+
 function refreshProgress() {
     if (haveEntries && haveVersion && haveQueue) {
         $('#progress').text('');
@@ -43,10 +60,11 @@ function refreshProgress() {
     }
 }
 
-function update(val) {
+function updateWebkitVersion(val) {
     document.getElementById('webkit-version').innerText = val;
     haveVersion = true;
     refreshProgress();
+    updateVersionBehind();
 };
 
 function setQueued(queue) {
@@ -209,4 +227,5 @@ function setEntries(feed) {
 
     haveEntries = true;
     refreshProgress();
+    updateVersionBehind();
 }
