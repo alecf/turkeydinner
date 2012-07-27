@@ -1,9 +1,9 @@
 
-.landed {
+.landed, .closed {
     background-color: #00ee00;
 }
 
-.pending {
+.pending, .mine {
     background-color: #eeee00;
 }
 

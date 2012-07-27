@@ -50,7 +50,7 @@ function convert_feed(doc, callback) {
     }
 }
 
-function refresh(email, review_nick, version_callback, feed_callback, queue_callback) {
+function refresh(email, review_nick, version_callback, feed_callback, queue_callback, chromium_callback) {
     if (!email)
         email = localStorage.getItem("email");
     if (!review_nick)
@@ -73,16 +73,21 @@ function refresh(email, review_nick, version_callback, feed_callback, queue_call
     if (email) {
         requestQueuePositions(email, function(queue) {
         buildStatus.queue = queue;
-        if (queue_callback) {
+        if (queue_callback)
             queue_callback(queue);
-        }
         });
     } else if (queue_callback) {
         queue_callback([]);
     }
 
     if (review_nick) {
-
+        requestAllChromium(review_nick, function(reviews) {
+            buildStatus.chromium_queue = reviews;
+            if (chromium_callback)
+                chromium_callback(reviews);
+        });
+    } else if (chromium_callback) {
+        chromium_callback([]);
     }
 };
 
