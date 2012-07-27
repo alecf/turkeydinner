@@ -1,4 +1,4 @@
-var haveEntries = true, haveVersion = true, haveQueue = true;
+var haveEntries = true, haveVersion = true, haveQueue = true, haveChromium = true;
 var backgroundPage = chrome.extension.getBackgroundPage();
 
 window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL ||
@@ -8,13 +8,14 @@ document.addEventListener('DOMContentLoaded', function() {
     updateWebkitVersion(backgroundPage.buildStatus.webkit_version);
 
     setQueued(backgroundPage.buildStatus.queue);
+    setChromiumQueue(backgroundPage.buildStatus.chromium_queue);
 
     setEntries(backgroundPage.feed);
 
     // hook up other event listeners
     var refreshButton = document.getElementById('refresh-button');
     refreshButton.onclick = function() {
-        haveEntries = haveVersion = haveQueue = false;
+        haveEntries = haveVersion = haveQueue = haveChromium = false;
         refreshProgress();
         console.log("I'd like to refresh with ", chrome.browserAction);
         backgroundPage.refresh(localStorage.getItem("email"),
@@ -53,7 +54,7 @@ function updateVersionBehind() {
 }
 
 function refreshProgress() {
-    if (haveEntries && haveVersion && haveQueue) {
+    if (haveEntries && haveVersion && haveQueue && haveChromium) {
         $('#progress').text('');
     } else {
         $('#progress').text('Loading...');
@@ -82,9 +83,9 @@ function setQueued(queue) {
 
     currentQueuedDiv.empty();
     queue.forEach(function(entry, i) {
-        if (i != 0) {
+        if (i != 0)
             $('<span>, </span>').appendTo(currentQueuedDiv);
-        }
+
         console.log("Loaded queue entry: ", entry);
         var position = '#' + entry.position;
         if (entry.locked)
@@ -96,6 +97,37 @@ function setQueued(queue) {
         $('<a target="turkeydinner-queue"></a>').attr('href', 'http://webkit-commit-queue.appspot.com/queue-status/commit-queue').text(position)
         .appendTo(span);
     });
+}
+
+function setChromiumQueue(queue) {
+    var queueDiv = $('#chromium-current-queued');
+    haveChromium = true;
+    refreshProgress();
+    if (queue && queue.length)
+        $('#chromium-queued-title').show();
+    else {
+        $('#chromium-queued-title').hide();
+        return;
+    }
+
+    queue.forEach(function(entry, i) {
+        if (i != 0)
+            $('<span>, </span>').appendTo(queueDiv);
+
+        console.log("Loaded chrome queue entry: ", entry);
+        var position = '#' + entry.position;
+        if (entry.locked)
+            position += " locked: " + entry.locked;
+        var span = $('<span class="' + entry.type + '">').appendTo(queueDiv);
+        $('<a target="_new"></a>').attr('href', entry.bug ? 'http://crbug.com/' + entry.bug : '')
+            .attr('title', entry.bug ? ("Chromium Bug #" + entry.bug) : ("Chromium Patch " + entry.id))
+            .text(entry.bug || ("(" + entry.id + ")"))
+                  .appendTo(span);
+//        $('<span>: </span>').appendTo(span);
+//        $('<a target="turkeydinner-queue"></a>').attr('href', 'http://webkit-commit-queue.appspot.com/queue-status/commit-queue').text(position)
+//        .appendTo(span);
+    });
+
 }
 
 function setEntries(feed) {

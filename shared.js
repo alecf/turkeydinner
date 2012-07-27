@@ -42,21 +42,53 @@ function requestFeed(url, callback) {
 
 }
 
+function requestAllChromium(nick, callback) {
+    // super cheesy, not parallel right now
+    requestChromiumList(nick, 'mine', function(mine) {
+        requestChromiumList(nick, 'closed', function(closed) {
+            console.log("DONE with all chromium: ", mine.concat(closed));
+            callback(mine.concat(closed));
+        });
+    });
+}
+
 function requestChromiumList(nick, type, callback) {
     requestFeed('http://codereview.chromium.org/rss/' + type + '/' + nick, function(doc) {
         var result = [];
+        var pending = 0;
 
         $('entry', doc).each(function (i, entry) {
-            console.log("Got entry ", i, ": ", entry);
             var url = $('link', entry).attr('href');
             var match = /\/(\d+)\//.exec(url);
             if (match) {
                 var summary = $('summary', entry).text();
-                var info = { id: match[1], summary: summary };
+                var id = match[1];
+                var info = { id: id, summary: summary.trim().split('\n')[0], type: type };
+                var bugmatch = /BUG=(\d+)/.exec(summary);
+                if (bugmatch)
+                    info.bug = bugmatch[1];
                 result.push(info);
+                pending++;
+                requestFeed('http://codereview.chromium.org/rss/issue/' + id, function(doc) {
+                    var lastCQUrl;
+                    $('entry', doc).each(function(i, entry) {
+                        var summary = $('summary', entry).text();
+                        var matchcq = /https:\/\/chromium-status.appspot.com\/cq\/[@\w.]+\/\d+\.*\//.exec(summary);
+                        if (matchcq) {
+                            lastCQUrl = matchcq[0];
+                        }
+                    });
+                    // not sure if this will work...
+                    info.cqUrl = lastCQUrl;
+                    if (--pending == 0) {
+                        callback(result);
+                    }
+                });
             }
-
         });
+        if (!pending) {
+            callback([]);
+        }
 
     });
 }
