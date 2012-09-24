@@ -145,8 +145,9 @@ function requestBugzillaList(email, callback) {
         $('entry', doc).each(function (i, entry) {
             var url = $('id', entry).text().trim();
             var match = /id=(\d+)/.exec(url);
+            var title = $('title', entry).text().trim();
             if (match) {
-                var buginfo = {id: match[1], data: entry};
+                var buginfo = {id: match[1], title: title, data: entry};
                 result.push(buginfo);
                 pending++;
                 requestAttachment(url, function(attachments) {
@@ -212,6 +213,7 @@ function maybeRun(bugList, queueList, callback) {
                     result.push({ position: entry.position,
                                   locked: time,
                                   bug: bug.id,
+                                  summary: bug.title,
                                   patch: patch.id });
                 }
             });
@@ -232,7 +234,7 @@ function requestQueuePositions(email, callback) {
 
     if (email) {
         requestBugzillaList(email, function(b) {
-            console.log("DONE with bugs");
+            console.log("DONE with bugs", b);
             bugList = b;
             maybeRun(bugList, queueList, callback);
         });
@@ -240,3 +242,9 @@ function requestQueuePositions(email, callback) {
         maybeRun([], queueList, callback);
     }
 }
+
+function webkitTracLink(svn_id) {
+    var url = 'https://trac.webkit.org/changeset/' + svn_id;
+    return '<a href="' + url + '" title="' + url + '">r' + svn_id+ '</a>';
+}
+

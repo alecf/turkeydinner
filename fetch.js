@@ -1,4 +1,6 @@
-
+/**
+ * Background page stuff
+ */
 buildStatus = {};
 feed = {
   entries: [],
@@ -40,7 +42,7 @@ function convert_feed(doc, callback) {
       entry.title = $('title:first', this).text();
       var title_end = text.indexOf("\n\n");
       if (title_end) {
-        entry.title = text.slice(0, title_end);
+        entry.title = text.slice(0, title_end).trim();
       }
       entries.push(entry);
     });
@@ -50,11 +52,11 @@ function convert_feed(doc, callback) {
     }
 }
 
-function refresh(email, review_nick, version_callback, feed_callback, queue_callback, chromium_callback) {
-    if (!email)
-        email = localStorage.getItem("email");
-    if (!review_nick)
-        review_nick = localStorage.getItem("review-nick");
+function refresh(version_callback, feed_callback, queue_callback, chromium_callback) {
+    var email = localStorage.getItem("email");
+    var review_nick = localStorage.getItem("review-nick");
+    console.log("Updating build status to ", new Date());
+    buildStatus.last_refresh = new Date();
 
     console.log("kicking off refresh...");
     requestWebkitVersion(function(val) {
