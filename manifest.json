@@ -11,8 +11,9 @@
   "background": { "scripts": ["jquery.min.js", "linkify.js", "shared.js", "fetch.js"] },
   
   "permissions": [
-    "http://git.chromium.org/",
-    "http://codereview.chromium.org/",
-    "http://webkit-commit-queue.appspot.com/"
+      "http://git.chromium.org/",
+      "http://codereview.chromium.org/",
+      "http://webkit-commit-queue.appspot.com/",
+      "https://chromium-status.appspot.com/"
   ]
 }

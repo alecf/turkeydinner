@@ -47,7 +47,9 @@ function requestAllChromium(nick, callback) {
     requestChromiumList(nick, 'mine', function(mine) {
         requestChromiumList(nick, 'closed', function(closed) {
             console.log("DONE with all chromium: ", mine.concat(closed));
-            callback(mine.concat(closed));
+            var full_list = mine.concat(closed);
+            full_list.sort(function(a, b) { return b.timestamp.localeCompare(a.timestamp); });
+            callback(full_list);
         });
     });
 }
@@ -74,6 +76,8 @@ function requestChromiumList(nick, type, callback) {
                     var lastCommit;
                     //console.log("Found chromium review issue: ", id);
                     $('entry', doc).each(function(i, entry) {
+                        // keep latest timestamp
+                        info.timestamp = $('updated', entry).text();
                         var summary = $('summary', entry).text();
                         var matchcq = /https:\/\/chromium-status.appspot.com\/cq\/[@\w.]+\/\d+\/\d+/.exec(summary);
                         if (matchcq) {
@@ -81,20 +85,24 @@ function requestChromiumList(nick, type, callback) {
                             info.cqUrl = matchcq[0];
                             lastCQindex = i;
                             delete info.commit;
-                            delete info.abort;
+                            delete info.aborted;
                         }
 
                         var committed = /Change committed as (\d+)/.exec(summary);
                         if (committed) {
                             info.commit = committed[1];
+                            delete info.aborted;
+                            delete info.cqUrl;
                         }
                         var aborted = /Presubmit ERRORS(.*)/m.exec(summary) ||
-                                /Commit queue rejected this change/m.exec(summary);
+                                /Commit queue rejected this change/m.exec(summary) ||
+                                /Sorry for I got bad news for ya/m.exec(summary);
                         if (aborted) {
                             // booh - regexps only go to the end of the current line
                             info.aborted = summary.slice(aborted.index);
+                            delete info.commit;
+                            delete info.cqUrl;
                         }
-
                     });
                     // not sure if this will work...
                     if (--pending == 0) {
@@ -265,7 +273,7 @@ function requestChromiumLKGR(callback) {
     xhr.open('GET', 'https://chromium-status.appspot.com/lkgr');
     xhr.onreadystatechange = function() {
         if (xhr.readyState == 4) {
-            callback($(xhr.responseText));
+            callback(xhr.responseText);
         }
     };
     xhr.send();

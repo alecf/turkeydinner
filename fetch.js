@@ -52,7 +52,7 @@ function convert_feed(doc, callback) {
     }
 }
 
-function refresh(version_callback, feed_callback, queue_callback, chromium_callback) {
+function refresh(version_callback, feed_callback, queue_callback, chromium_callback, chromium_lkgr_callback) {
     var email = localStorage.getItem("email");
     var review_nick = localStorage.getItem("review-nick");
     console.log("Updating build status to ", new Date());
@@ -91,6 +91,12 @@ function refresh(version_callback, feed_callback, queue_callback, chromium_callb
     } else if (chromium_callback) {
         chromium_callback([]);
     }
+
+    requestChromiumLKGR(function(lkgr) {
+        buildStatus.chromium_lkgr = lkgr;
+        if (chromium_lkgr_callback)
+            chromium_lkgr_callback(lkgr);
+    });
 };
 
 refresh();

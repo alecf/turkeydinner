@@ -8,12 +8,14 @@ body {
 
 .entry {
     margin-top: -1px;
+    margin-left: 5px;
     border: 1px solid;
     border-radius: 2px;
     padding-left: 2px;
     padding-right: 2px;
+    padding-bottom: 2px;
     text-decoration: none;
-    font-size: small;
+    font-size: smaller;
 }
 
 .entry a {
@@ -25,7 +27,7 @@ body {
     border-color: #00dd00;
 }
 
-.pending, .mine {
+.pending {
     background-color: #eeee00;
     border-color: #dddd00;
 }
@@ -50,6 +52,7 @@ body {
 #checkin-table-wrap {
     width: 100%;
     overflow: auto;
+    border: 1px solid #eee;
 }
 
 #progress {
@@ -91,7 +94,8 @@ body {
 #entry-details {
     height: 150px;
     overflow: auto;
-    background-color: #ddd;
+    background-color: #eee;
+    padding: 4px;
 }
 
 div.entry-details {

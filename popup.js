@@ -1,16 +1,23 @@
-var haveEntries = true, haveVersion = true, haveWebkitQueue = true, haveChromiumQueue = true;
+var LOADING_STATUS = {
+    haveWebkitCommits: true,
+    haveWebkitVersion: true,
+    haveWebkitQueue: true,
+    haveChromiumQueue: true,
+    haveChromiumLKGR: true,
+};
 var backgroundPage = chrome.extension.getBackgroundPage();
 
 window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL ||
     window.webkitResolveLocalFileSystemURL;
 
 document.addEventListener('DOMContentLoaded', function() {
-    update(backgroundPage.buildStatus.webkit_version);
+    updateWebkitVersion(backgroundPage.buildStatus.webkit_version);
 
     setWebkitQueue(backgroundPage.buildStatus.queue);
     setChromiumQueue(backgroundPage.buildStatus.chromium_queue);
 
     setWebkitCommits(backgroundPage.feed);
+    setChromiumLKGR(backgroundPage.buildStatus.chromium_lkgr);
 
     // hook up other event listeners
     $('#refresh-button').click(function() {
@@ -30,7 +37,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     var now = new Date();
-    console.log("Checking backgroundPage.lastRefresh = ", backgroundPage.lastRefresh);
     if (backgroundPage.buildStatus.last_refresh && (now - backgroundPage.buildStatus.last_refresh) > (1000 * 60)) {
         refreshAll();
     }
@@ -38,30 +44,38 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function refreshAll() {
-    haveEntries = haveVersion = haveWebkitQueue = haveChromiumQueue = false;
+    for (var k in LOADING_STATUS)
+        LOADING_STATUS[k] = false;
     refreshProgress();
-    backgroundPage.refresh(update, setWebkitCommits, setWebkitQueue, setChromiumQueue);
+    backgroundPage.refresh(updateWebkitVersion, setWebkitCommits, setWebkitQueue, setChromiumQueue, setChromiumLKGR);
 }
 
 function refreshProgress() {
-    console.log(haveEntries, haveVersion, haveWebkitQueue, haveChromiumQueue);
-    if (haveEntries && haveVersion && haveWebkitQueue && haveChromiumQueue) {
+    var fullyLoaded = true;
+    var loaded = 0;
+    var total = 0;
+    for (var k in LOADING_STATUS) {
+        total++;
+        loaded += LOADING_STATUS[k] ? 1 : 0;
+        fullyLoaded = fullyLoaded && LOADING_STATUS[k];
+    }
+    if (fullyLoaded) {
         $('#progress').text('');
         $('#refresh-button').removeAttr('disabled');
     } else {
-        $('#progress').text('Loading...');
+        $('#progress').text('Loading... (' + loaded + "/" + total + ")");
         $('#refresh-button').attr('disabled', 'true');
     }
 }
 
-function update(val) {
+function updateWebkitVersion(val) {
+    LOADING_STATUS.haveWebkitVersion = true;
     document.getElementById('webkit-version').innerText = val;
-    haveVersion = true;
     refreshProgress();
 };
 
 function setWebkitQueue(queue) {
-    haveWebkitQueue = true;
+    LOADING_STATUS.haveWebkitQueue = true;
     refreshProgress();
     var parentDiv = $('#webkit-queue-title');
     var currentQueueDiv = parentDiv.find('.current-queue');
@@ -80,7 +94,6 @@ function setWebkitQueue(queue) {
         if (i != 0)
             $('<span>, </span>').appendTo(currentQueueDiv);
 
-        console.log("Loaded webkit queue entry: ", entry);
         var span = $('<span>').appendTo(currentQueueDiv);
         var url = 'http://wkb.ug/' + entry.bug;
         var text = entry.bug;
@@ -102,8 +115,9 @@ function setWebkitQueue(queue) {
 }
 
 function setChromiumQueue(queue) {
-    haveChromiumQueue = true;
+    LOADING_STATUS.haveChromiumQueue = true;
     refreshProgress();
+    var oneWeekAgo = new Date(new Date() - 7*24*60*60*1000).toISOString();
     var parentDiv = $('#chromium-queue-title');
     var currentQueueDiv = parentDiv.find('.current-queue');
     currentQueueDiv.empty();
@@ -113,12 +127,10 @@ function setChromiumQueue(queue) {
         parentDiv.hide();
         return;
     }
+    queue.forEach(function(entry) {
+        if (entry.timestamp < oneWeekAgo)
+            return;
 
-    queue.forEach(function(entry, i) {
-        if (i != 0)
-            $('<span>, </span>').appendTo(currentQueueDiv);
-
-        console.log("Loaded chrome queue entry: ", entry);
         var position = '#' + entry.position;
         if (entry.locked)
             position += " locked: " + entry.locked;
@@ -127,24 +139,28 @@ function setChromiumQueue(queue) {
                 'http://codereview.chromium.org/' + entry.id;
         var title = entry.bug ? ("Chromium Bug #" + entry.bug) : ("Chromium Patch " + entry.id);
         if (entry.commit)
-            title += " (committed r" + entry.commit + ")";
+            title += " (committed as r" + entry.commit + ")";
         else if (entry.aborted) {
-            title += "xXX " + entry.aborted;
+            title += "\n" + entry.aborted;
             span.addClass('aborted');
         }
-        else if (entry.cqUrl)
+        else if (entry.cqUrl) {
+            span.addClass('pending');
             title += " (in commit queue)";
-        var text = entry.bug || ("(" + entry.id + ")") ;
+        }
+        if (entry.summary)
+            title += "\n" + entry.summary;
+        var text = entry.bug || ("[" + entry.id + "]") ;
         $('<a target="_new"></a>').attr('href', url)
             .attr('title', title)
             .text(text)
             .appendTo(span);
-        console.log("Chromium Issue ", text, ". Committed: ", entry);
     });
 
 }
 
 function setWebkitCommits(feed) {
+    LOADING_STATUS.haveWebkitCommits = true;
     var entries = feed.entries;
     var feedRow = $('#feed-entries');
     feedRow.empty();
@@ -201,7 +217,6 @@ function setWebkitCommits(feed) {
             .addClass(landing_status)
         .appendTo(listItem);
         var date = new Date(entry.updated);
-        //backgroundPage.console.log("New webkit entry: ", entry);
         var details = $('<div>').addClass('entry-details').appendTo(listItem);
         $('<div class="author">').text(author).appendTo(details);
         $('<div class="webkit-trac">').html(webkitTracLink(entry.svn_id)).appendTo(details);
@@ -224,7 +239,7 @@ function setWebkitCommits(feed) {
     $('#chrome-status').empty();
     $('tr.rev').remove();
     if (currentLanded.length > 0) {
-        var currentLandedDiv = $('#current-landed').empty();
+        var currentLandedDiv = $('.current-landed').empty();
         currentLanded.forEach(function(entry, i) {
             var entryRow;
             if (entry.column < pending) {
@@ -233,9 +248,6 @@ function setWebkitCommits(feed) {
                 entryRow = $('<tr class="rev"><td colspan=' + entry.column + ' style="text-align: right">' + entry.bug + '</td><td>&#8628;</td></tr>');
             }
             entryRow.insertAfter('#chrome-status');
-            if (i != 0) {
-                $('<span>, </span>').appendTo(currentLandedDiv);
-            }
             $('<a target="turkeydinner-webkit-svn">').attr('href', 'http://trac.webkit.org/changeset/' + entry.svn_id)
                 .addClass('landed entry')
                     .text(entry.bug).appendTo(currentLandedDiv);
@@ -274,6 +286,11 @@ function setWebkitCommits(feed) {
         $('#webkit-pending-title').hide();
     }
 
-    haveEntries = true;
     refreshProgress();
+}
+
+function setChromiumLKGR(lkgr) {
+    LOADING_STATUS.haveChromiumLKGR = true;
+    console.log("LKGR = ", lkgr);
+    $('#chromium-lkgr').text(lkgr);
 }
