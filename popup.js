@@ -69,12 +69,23 @@ function refreshProgress() {
     }
 }
 
+function fadeShow($elmt, text) {
+    if (!$elmt || !$elmt.length)
+        console.error("oops.. no element", $elmt && $elmt.selectorb);
+    var background = $elmt.css('background-color');
+
+    if ($elmt.text() != text)
+        return $elmt.text(text).animate({ backgroundColor: '#f00' }, 100)
+        .animate({ backgroundColor: '#fff' }, 1000);
+    return $elmt;
+}
+
 function setWebkitVersion(webkit_version, chromium_version) {
     console.log("setWebkitVersion got ", webkit_version, chromium_version);
     LOADING_STATUS.haveWebkitVersion = true;
-    $('#webkit-version').text(webkit_version);
+    fadeShow($('#webkit-version'), webkit_version);
     chromium_version = chromium_version || "";
-    $('#chromium-webkit-version').text(chromium_version);
+    fadeShow($('#chromium-webkit-version'), chromium_version);
     refreshProgress();
 };
 
@@ -102,9 +113,8 @@ function setWebkitQueue(queue) {
         var url = 'http://wkb.ug/' + entry.bug;
         var text = entry.bug;
         var title = entry.summary;
-        $('<a target="_new"></a>')
-            .attr('href', url)
-            .text(text).attr('title', title)
+        $('<a target="_new"></a>').text(text)
+            .attr('href', url).attr('title', title)
             .appendTo(span);
 
         // webkit queue position?
@@ -112,9 +122,9 @@ function setWebkitQueue(queue) {
         if (entry.locked)
             position += " locked: " + entry.locked;
         $('<span>: </span>').appendTo(span);
-        $('<a target="turkeydinner-queue"></a>')
-            .attr('href', 'http://webkit-commit-queue.appspot.com/queue-status/commit-queue').text(position)
-        .appendTo(span);
+        $('<a target="turkeydinner-queue"></a>').text(position)
+            .attr('href', 'http://webkit-commit-queue.appspot.com/queue-status/commit-queue')
+            .appendTo(span);
     });
 }
 
@@ -155,9 +165,8 @@ function setChromiumQueue(queue) {
         if (entry.summary)
             title += "\n" + entry.summary;
         var text = entry.bug || ("[" + entry.id + "]") ;
-        $('<a target="_new"></a>').attr('href', url)
+        $('<a target="_new"></a>').text(text).attr('href', url)
             .attr('title', title)
-            .text(text)
             .appendTo(span);
     });
 
@@ -296,5 +305,5 @@ function setWebkitCommits(feed) {
 function setChromiumLKGR(lkgr) {
     LOADING_STATUS.haveChromiumLKGR = true;
     console.log("LKGR = ", lkgr);
-    $('#chromium-lkgr').text(lkgr);
+    fadeShow($('#chromium-lkgr'), lkgr);
 }
