@@ -11,7 +11,8 @@ window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL ||
     window.webkitResolveLocalFileSystemURL;
 
 document.addEventListener('DOMContentLoaded', function() {
-    updateWebkitVersion(backgroundPage.buildStatus.webkit_version);
+    setWebkitVersion(backgroundPage.buildStatus.webkit_version,
+                        backgroundPage.buildStatus.chromium_webkit_version);
 
     setWebkitQueue(backgroundPage.buildStatus.queue);
     setChromiumQueue(backgroundPage.buildStatus.chromium_queue);
@@ -47,7 +48,7 @@ function refreshAll() {
     for (var k in LOADING_STATUS)
         LOADING_STATUS[k] = false;
     refreshProgress();
-    backgroundPage.refresh(updateWebkitVersion, setWebkitCommits, setWebkitQueue, setChromiumQueue, setChromiumLKGR);
+    backgroundPage.refresh(setWebkitVersion, setWebkitCommits, setWebkitQueue, setChromiumQueue, setChromiumLKGR);
 }
 
 function refreshProgress() {
@@ -68,9 +69,12 @@ function refreshProgress() {
     }
 }
 
-function updateWebkitVersion(val) {
+function setWebkitVersion(webkit_version, chromium_version) {
+    console.log("setWebkitVersion got ", webkit_version, chromium_version);
     LOADING_STATUS.haveWebkitVersion = true;
-    document.getElementById('webkit-version').innerText = val;
+    $('#webkit-version').text(webkit_version);
+    chromium_version = chromium_version || "";
+    $('#chromium-webkit-version').text(chromium_version);
     refreshProgress();
 };
 

@@ -14,9 +14,7 @@ function requestWebkitVersion(callback) {
                 var revision = line.indexOf('"webkit_revision":');
                 if (revision != -1) {
                     var val = line.split(":")[1].split('"')[1];
-                    if (callback) {
-                        callback(val);
-                    }
+                    requestChromiumVersionForWebkitRoll(val, callback);
                     break;
                 }
             }
@@ -24,6 +22,44 @@ function requestWebkitVersion(callback) {
     };
     xhr.send();
 }
+
+
+function requestChromiumVersionForWebkitRoll(webkitVersion, callback) {
+    requestFeed('http://git.chromium.org/gitweb/?p=chromium/src.git;a=atom;f=DEPS;h=refs/heads/master',
+                function(feed) {
+                    var found = false;
+                    $('entry', feed).each(function(i, entry) {
+                        var comments = $('content', entry).text();
+
+                        // at least has to mention webkit
+                        if (!/webkit/i.exec(comments))
+                            return;
+                        // this is cheezy - we could possibly request the rss feed for the issue, then
+                        // look at the latest diff in the issue?
+                        var match = /(\d+):(\d+)/m.exec(comments);
+                        if (match) {
+                            var from = match[1];
+                            var to = match[2];
+                            var svn_match = /git-svn-id:\s+svn:\/\/svn.chromium.org\/chrome\/trunk\/src@(\d+)/m.exec(comments);
+                            if (to == webkitVersion) {
+                                found = true;
+                                if (callback)
+                                    callback(webkitVersion, svn_match ? svn_match[1] : "???");
+                                return false;
+                            }
+                        }
+                        // var match = /Review URL:\s+https:\/\/chromiumcodereview.appspot.com\/(\d+)/m.exec(comments);
+                        // if (match) {
+                        //     var id = match[1];
+                        //     console.log("DEPS log entry[" + i + "] => Chromium issue ", id);
+                        //     //requestChromiumIssue(id, function(result)
+                        // }
+                    });
+                    if (!found && callback)
+                        callback(webkitVersion);
+                });
+}
+
 
 function requestFeed(url, callback) {
   var xhr = new XMLHttpRequest();
@@ -54,6 +90,10 @@ function requestAllChromium(nick, callback) {
     });
 }
 
+function requestChromiumIssue(id, callback) {
+    requestFeed('http://codereview.chromium.org/rss/issue/' + id, callback);
+}
+
 function requestChromiumList(nick, type, callback) {
     requestFeed('http://codereview.chromium.org/rss/' + type + '/' + nick, function(doc) {
         var result = [];
@@ -71,7 +111,7 @@ function requestChromiumList(nick, type, callback) {
                     info.bug = bugmatch[1];
                 result.push(info);
                 pending++;
-                requestFeed('http://codereview.chromium.org/rss/issue/' + id, function(doc) {
+                requestChromiumIssue(id, function(doc) {
                     var lastCQindex = -1;
                     var lastCommit;
                     //console.log("Found chromium review issue: ", id);

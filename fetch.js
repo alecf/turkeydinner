@@ -59,14 +59,15 @@ function refresh(version_callback, feed_callback, queue_callback, chromium_callb
     buildStatus.last_refresh = new Date();
 
     console.log("kicking off refresh...");
-    requestWebkitVersion(function(val) {
+    requestWebkitVersion(function(webkit_version, chromium_version) {
         if (chrome.browserAction) {
-            chrome.browserAction.setBadgeText({text: val});
-            chrome.browserAction.setTitle({title: "WebKit revision: " + val});
+            chrome.browserAction.setBadgeText({text: webkit_version});
+            chrome.browserAction.setTitle({title: "WebKit revision: " + webkit_version});
         }
-        buildStatus['webkit_version'] = parseInt(val);
+        buildStatus.webkit_version = parseInt(webkit_version);
+        buildStatus.chromium_webkit_version = parseInt(chromium_version);
         if (version_callback) {
-            version_callback(val);
+            version_callback(webkit_version, chromium_version);
         }
     });
     requestWebkitFeed(function(doc) {
