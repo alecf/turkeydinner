@@ -70,16 +70,33 @@ function requestChromiumList(nick, type, callback) {
                 result.push(info);
                 pending++;
                 requestFeed('http://codereview.chromium.org/rss/issue/' + id, function(doc) {
-                    var lastCQUrl;
+                    var lastCQindex = -1;
+                    var lastCommit;
+                    //console.log("Found chromium review issue: ", id);
                     $('entry', doc).each(function(i, entry) {
                         var summary = $('summary', entry).text();
-                        var matchcq = /https:\/\/chromium-status.appspot.com\/cq\/[@\w.]+\/\d+\.*\//.exec(summary);
+                        var matchcq = /https:\/\/chromium-status.appspot.com\/cq\/[@\w.]+\/\d+\/\d+/.exec(summary);
                         if (matchcq) {
-                            lastCQUrl = matchcq[0];
+                            // keep the last one!
+                            info.cqUrl = matchcq[0];
+                            lastCQindex = i;
+                            delete info.commit;
+                            delete info.abort;
                         }
+
+                        var committed = /Change committed as (\d+)/.exec(summary);
+                        if (committed) {
+                            info.commit = committed[1];
+                        }
+                        var aborted = /Presubmit ERRORS(.*)/m.exec(summary) ||
+                                /Commit queue rejected this change/m.exec(summary);
+                        if (aborted) {
+                            // booh - regexps only go to the end of the current line
+                            info.aborted = summary.slice(aborted.index);
+                        }
+
                     });
                     // not sure if this will work...
-                    info.cqUrl = lastCQUrl;
                     if (--pending == 0) {
                         callback(result);
                     }
@@ -243,8 +260,18 @@ function requestQueuePositions(email, callback) {
     }
 }
 
+function requestChromiumLKGR(callback) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'https://chromium-status.appspot.com/lkgr');
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState == 4) {
+            callback($(xhr.responseText));
+        }
+    };
+    xhr.send();
+}
+
 function webkitTracLink(svn_id) {
     var url = 'https://trac.webkit.org/changeset/' + svn_id;
     return '<a href="' + url + '" title="' + url + '">r' + svn_id+ '</a>';
 }
-

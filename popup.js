@@ -65,6 +65,7 @@ function setWebkitQueue(queue) {
     refreshProgress();
     var parentDiv = $('#webkit-queue-title');
     var currentQueueDiv = parentDiv.find('.current-queue');
+    currentQueueDiv.empty();
     if (queue && queue.length)
         parentDiv.show();
     else {
@@ -72,26 +73,30 @@ function setWebkitQueue(queue) {
         return;
     }
 
-
     if (!queue)
         return;
 
-    currentQueueDiv.empty();
     queue.forEach(function(entry, i) {
         if (i != 0)
             $('<span>, </span>').appendTo(currentQueueDiv);
 
         console.log("Loaded webkit queue entry: ", entry);
+        var span = $('<span>').appendTo(currentQueueDiv);
+        var url = 'http://wkb.ug/' + entry.bug;
+        var text = entry.bug;
+        var title = entry.summary;
+        $('<a target="_new"></a>')
+            .attr('href', url)
+            .text(text).attr('title', title)
+            .appendTo(span);
+
+        // webkit queue position?
         var position = '#' + entry.position;
         if (entry.locked)
             position += " locked: " + entry.locked;
-        var span = $('<span>').appendTo(currentQueueDiv);
-        $('<a target="_new"></a>')
-            .attr('href', 'http://wkb.ug/' + entry.bug)
-            .text(entry.bug).attr('title', entry.summary)
-            .appendTo(span);
         $('<span>: </span>').appendTo(span);
-        $('<a target="turkeydinner-queue"></a>').attr('href', 'http://webkit-commit-queue.appspot.com/queue-status/commit-queue').text(position)
+        $('<a target="turkeydinner-queue"></a>')
+            .attr('href', 'http://webkit-commit-queue.appspot.com/queue-status/commit-queue').text(position)
         .appendTo(span);
     });
 }
@@ -117,17 +122,24 @@ function setChromiumQueue(queue) {
         var position = '#' + entry.position;
         if (entry.locked)
             position += " locked: " + entry.locked;
-        var span = $('<span class="' + entry.type + '">').appendTo(currentQueueDiv);
+        var span = $('<span class="' + entry.type + ' entry">').appendTo(currentQueueDiv);
         var url = entry.bug ? 'http://crbug.com/' + entry.bug :
                 'http://codereview.chromium.org/' + entry.id;
+        var title = entry.bug ? ("Chromium Bug #" + entry.bug) : ("Chromium Patch " + entry.id);
+        if (entry.commit)
+            title += " (committed r" + entry.commit + ")";
+        else if (entry.aborted) {
+            title += "xXX " + entry.aborted;
+            span.addClass('aborted');
+        }
+        else if (entry.cqUrl)
+            title += " (in commit queue)";
+        var text = entry.bug || ("(" + entry.id + ")") ;
         $('<a target="_new"></a>').attr('href', url)
-            .attr('title', entry.bug ? ("Chromium Bug #" + entry.bug) : ("Chromium Patch " + entry.id))
-            .attr('title', entry.summary)
-            .text(entry.bug || ("(" + entry.id + ")"))
+            .attr('title', title)
+            .text(text)
             .appendTo(span);
-//        $('<span>: </span>').appendTo(span);
-//        $('<a target="turkeydinner-queue"></a>').attr('href', 'http://webkit-commit-queue.appspot.com/queue-status/commit-queue').text(position)
-//        .appendTo(span);
+        console.log("Chromium Issue ", text, ". Committed: ", entry);
     });
 
 }
@@ -182,14 +194,14 @@ function setWebkitCommits(feed) {
             pending += 1;
         }
         var listItem = $('<td>').attr('title', entry.svn_id);
-        if (mine) {
+        if (mine)
             listItem.addClass('mine');
-        }
+
         var itembox = $('<a>').attr('name', 'svn' + entry.svn_id).html('&nbsp;')
             .addClass(landing_status)
         .appendTo(listItem);
         var date = new Date(entry.updated);
-        backgroundPage.console.log("New webkit entry: ", entry);
+        //backgroundPage.console.log("New webkit entry: ", entry);
         var details = $('<div>').addClass('entry-details').appendTo(listItem);
         $('<div class="author">').text(author).appendTo(details);
         $('<div class="webkit-trac">').html(webkitTracLink(entry.svn_id)).appendTo(details);
@@ -225,7 +237,7 @@ function setWebkitCommits(feed) {
                 $('<span>, </span>').appendTo(currentLandedDiv);
             }
             $('<a target="turkeydinner-webkit-svn">').attr('href', 'http://trac.webkit.org/changeset/' + entry.svn_id)
-                .addClass('landed')
+                .addClass('landed entry')
                     .text(entry.bug).appendTo(currentLandedDiv);
         });
         $('#webkit-landed-title').show();
@@ -253,7 +265,7 @@ function setWebkitCommits(feed) {
                 $('<span>, </span>').appendTo(currentPendingDiv);
             }
             $('<a target="turkeydinner-webkit-svn">').attr('href', 'http://trac.webkit.org/changeset/' + entry.svn_id)
-                .addClass('pending')
+                .addClass('pending entry')
                 .attr('title', entry.title)
                 .text(entry.bug).appendTo(currentPendingDiv);
         });
