@@ -1,10 +1,40 @@
+body {
+    font-family: sans-serif;
+}
+
+.entry-list {
+    padding-bottom: 3px;
+}
+
+.entry {
+    margin-top: -1px;
+    margin-left: 5px;
+    border: 1px solid;
+    border-radius: 2px;
+    padding-left: 2px;
+    padding-right: 2px;
+    padding-bottom: 2px;
+    text-decoration: none;
+    font-size: smaller;
+}
+
+.entry a {
+    text-decoration: none;
+}
 
 .landed, .closed {
     background-color: #00ee00;
+    border-color: #00dd00;
 }
 
-.pending, .mine {
+.pending {
     background-color: #eeee00;
+    border-color: #dddd00;
+}
+
+.aborted {
+    background-color: #ee0000;
+    background-color: #dd0000;
 }
 
 .author {
@@ -22,6 +52,7 @@
 #checkin-table-wrap {
     width: 100%;
     overflow: auto;
+    border: 1px solid #eee;
 }
 
 #progress {
@@ -63,7 +94,8 @@
 #entry-details {
     height: 150px;
     overflow: auto;
-    background-color: #ddd;
+    background-color: #eee;
+    padding: 4px;
 }
 
 div.entry-details {

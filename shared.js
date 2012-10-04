@@ -14,9 +14,7 @@ function requestWebkitVersion(callback) {
                 var revision = line.indexOf('"webkit_revision":');
                 if (revision != -1) {
                     var val = line.split(":")[1].split('"')[1];
-                    if (callback) {
-                        callback(val);
-                    }
+                    requestChromiumVersionForWebkitRoll(val, callback);
                     break;
                 }
             }
@@ -24,6 +22,44 @@ function requestWebkitVersion(callback) {
     };
     xhr.send();
 }
+
+
+function requestChromiumVersionForWebkitRoll(webkitVersion, callback) {
+    requestFeed('http://git.chromium.org/gitweb/?p=chromium/src.git;a=atom;f=DEPS;h=refs/heads/master',
+                function(feed) {
+                    var found = false;
+                    $('entry', feed).each(function(i, entry) {
+                        var comments = $('content', entry).text();
+
+                        // at least has to mention webkit
+                        if (!/webkit/i.exec(comments))
+                            return;
+                        // this is cheezy - we could possibly request the rss feed for the issue, then
+                        // look at the latest diff in the issue?
+                        var match = /(\d+):(\d+)/m.exec(comments);
+                        if (match) {
+                            var from = match[1];
+                            var to = match[2];
+                            var svn_match = /git-svn-id:\s+svn:\/\/svn.chromium.org\/chrome\/trunk\/src@(\d+)/m.exec(comments);
+                            if (to == webkitVersion) {
+                                found = true;
+                                if (callback)
+                                    callback(webkitVersion, svn_match ? svn_match[1] : "???");
+                                return false;
+                            }
+                        }
+                        // var match = /Review URL:\s+https:\/\/chromiumcodereview.appspot.com\/(\d+)/m.exec(comments);
+                        // if (match) {
+                        //     var id = match[1];
+                        //     console.log("DEPS log entry[" + i + "] => Chromium issue ", id);
+                        //     //requestChromiumIssue(id, function(result)
+                        // }
+                    });
+                    if (!found && callback)
+                        callback(webkitVersion);
+                });
+}
+
 
 function requestFeed(url, callback) {
   var xhr = new XMLHttpRequest();
@@ -47,9 +83,15 @@ function requestAllChromium(nick, callback) {
     requestChromiumList(nick, 'mine', function(mine) {
         requestChromiumList(nick, 'closed', function(closed) {
             console.log("DONE with all chromium: ", mine.concat(closed));
-            callback(mine.concat(closed));
+            var full_list = mine.concat(closed);
+            full_list.sort(function(a, b) { return b.timestamp.localeCompare(a.timestamp); });
+            callback(full_list);
         });
     });
+}
+
+function requestChromiumIssue(id, callback) {
+    requestFeed('http://codereview.chromium.org/rss/issue/' + id, callback);
 }
 
 function requestChromiumList(nick, type, callback) {
@@ -69,17 +111,40 @@ function requestChromiumList(nick, type, callback) {
                     info.bug = bugmatch[1];
                 result.push(info);
                 pending++;
-                requestFeed('http://codereview.chromium.org/rss/issue/' + id, function(doc) {
-                    var lastCQUrl;
+                requestChromiumIssue(id, function(doc) {
+                    var lastCQindex = -1;
+                    var lastCommit;
+                    //console.log("Found chromium review issue: ", id);
                     $('entry', doc).each(function(i, entry) {
+                        // keep latest timestamp
+                        info.timestamp = $('updated', entry).text();
                         var summary = $('summary', entry).text();
-                        var matchcq = /https:\/\/chromium-status.appspot.com\/cq\/[@\w.]+\/\d+\.*\//.exec(summary);
+                        var matchcq = /https:\/\/chromium-status.appspot.com\/cq\/[@\w.]+\/\d+\/\d+/.exec(summary);
                         if (matchcq) {
-                            lastCQUrl = matchcq[0];
+                            // keep the last one!
+                            info.cqUrl = matchcq[0];
+                            lastCQindex = i;
+                            delete info.commit;
+                            delete info.aborted;
+                        }
+
+                        var committed = /Change committed as (\d+)/.exec(summary);
+                        if (committed) {
+                            info.commit = committed[1];
+                            delete info.aborted;
+                            delete info.cqUrl;
+                        }
+                        var aborted = /Presubmit ERRORS(.*)/m.exec(summary) ||
+                                /Commit queue rejected this change/m.exec(summary) ||
+                                /Sorry for I got bad news for ya/m.exec(summary);
+                        if (aborted) {
+                            // booh - regexps only go to the end of the current line
+                            info.aborted = summary.slice(aborted.index);
+                            delete info.commit;
+                            delete info.cqUrl;
                         }
                     });
                     // not sure if this will work...
-                    info.cqUrl = lastCQUrl;
                     if (--pending == 0) {
                         callback(result);
                     }
@@ -145,8 +210,9 @@ function requestBugzillaList(email, callback) {
         $('entry', doc).each(function (i, entry) {
             var url = $('id', entry).text().trim();
             var match = /id=(\d+)/.exec(url);
+            var title = $('title', entry).text().trim();
             if (match) {
-                var buginfo = {id: match[1], data: entry};
+                var buginfo = {id: match[1], title: title, data: entry};
                 result.push(buginfo);
                 pending++;
                 requestAttachment(url, function(attachments) {
@@ -212,6 +278,7 @@ function maybeRun(bugList, queueList, callback) {
                     result.push({ position: entry.position,
                                   locked: time,
                                   bug: bug.id,
+                                  summary: bug.title,
                                   patch: patch.id });
                 }
             });
@@ -232,11 +299,27 @@ function requestQueuePositions(email, callback) {
 
     if (email) {
         requestBugzillaList(email, function(b) {
-            console.log("DONE with bugs");
+            console.log("DONE with bugs", b);
             bugList = b;
             maybeRun(bugList, queueList, callback);
         });
     } else {
         maybeRun([], queueList, callback);
     }
+}
+
+function requestChromiumLKGR(callback) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'https://chromium-status.appspot.com/lkgr');
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState == 4) {
+            callback(xhr.responseText);
+        }
+    };
+    xhr.send();
+}
+
+function webkitTracLink(svn_id) {
+    var url = 'https://trac.webkit.org/changeset/' + svn_id;
+    return '<a href="' + url + '" title="' + url + '">r' + svn_id+ '</a>';
 }

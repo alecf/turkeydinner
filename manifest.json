@@ -8,11 +8,12 @@
     "default_title": "not loaded",
     "default_popup": "popup.html"
   },
-  "background": { "scripts": ["jquery.min.js", "shared.js", "fetch.js"] },
+  "background": { "scripts": ["jquery-1.8.0.min.js", "linkify.js", "shared.js", "fetch.js"] },
   
   "permissions": [
-    "http://git.chromium.org/",
-    "http://codereview.chromium.org/",
-    "http://webkit-commit-queue.appspot.com/"
+      "http://git.chromium.org/",
+      "http://codereview.chromium.org/",
+      "http://webkit-commit-queue.appspot.com/",
+      "https://chromium-status.appspot.com/"
   ]
 }

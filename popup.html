@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <script src="jquery.min.js"> </script>
+        <script src="jquery-1.8.0.min.js"> </script>
+        <script src="jquery.color.js"> </script>
+        <script src="linkify.js"> </script>
         <script src="shared.js"> </script>
         <script src="popup.js"> </script>
         <link rel="stylesheet" href="popup.css" type="text/css">
     </head>
     <body>
         <div id="progress"></div>
-        <div>Latest Webkit roll is r<span id="webkit-version"></span>
-            <span id="webkit-behind">
-        </div>
+        <div>Latest Webkit roll: r<span id="webkit-version"></span>
+            in chromium r<span id="chromium-webkit-version"></span></div>
+        <div>Chromium LKGR: r<span id="chromium-lkgr"></span></div>
         <button id="refresh-button">Refresh</button>
         
         <div>WebKit email: <input type="text" id="changelog-name">
@@ -18,10 +20,10 @@
         <div>Chromium Review Nickname: <input type="text" id="review-nick">
         </input></div>
         <div id="feed-info">
-            <div id="chromium-queued-title">Chromium: <span id="chromium-current-queued"></span></div>
-            <div id="queued-title">Queued: <span id="current-queued"></span></div>
-            <div id="pending-title">Pending: <span id="current-pending"></span></div>
-            <div id="landed-title">Landed: <span id="current-landed"></span></div>
+            <div class="entry-list" id="chromium-queue-title">Chromium: <span class="current-queue"></span></div>
+            <div class="entry-list" id="webkit-queue-title">Webkit Queue: <span class="current-queue"></span></div>
+            <div class="entry-list" id="webkit-pending-title">Webkit Pending: <span class="current-pending"></span></div>
+            <div class="entry-list" id="webkit-landed-title">Webkit Landed: <span class="current-landed"></span></div>
             <a id="feed-jump"></a>
             <div id="checkins">
                 <div id="checkin-table-wrap">
