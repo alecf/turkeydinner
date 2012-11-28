@@ -74,13 +74,18 @@ function fadeShow($elmt, text) {
         console.error("oops.. no element", $elmt && $elmt.selectorb);
     var background = $elmt.css('background-color');
 
-    if ($elmt.text() != text)
-        return $elmt.text(text).animate({ backgroundColor: '#f00' }, 100)
-        .animate({ backgroundColor: '#fff' }, 1000);
+    var wasEmpty = !$elmt.text();
+    console.log("Existing text for ", $elmt, ": ", $elmt.text(), " = ", wasEmpty);
+    if ($elmt.text() != text) {
+        $elmt.text(text);
+        if (!wasEmpty)
+            $elmt.animate({ backgroundColor: '#f00' }, 100)
+            .animate({ backgroundColor: '#fff' }, 1000);
+    }
     return $elmt;
 }
 
-function setWebkitVersion(webkit_version, chromium_version) {
+function setWebkitVersion(webkit_version, chromium_version, initializing) {
     console.log("setWebkitVersion got ", webkit_version, chromium_version);
     LOADING_STATUS.haveWebkitVersion = true;
     fadeShow($('#webkit-version'), webkit_version);
@@ -149,8 +154,7 @@ function setChromiumQueue(queue) {
         if (entry.locked)
             position += " locked: " + entry.locked;
         var span = $('<span class="' + entry.type + ' entry">').appendTo(currentQueueDiv);
-        var url = entry.bug ? 'http://crbug.com/' + entry.bug :
-                'http://codereview.chromium.org/' + entry.id;
+        var url = 'http://codereview.chromium.org/' + entry.id;
         var title = entry.bug ? ("Chromium Bug #" + entry.bug) : ("Chromium Patch " + entry.id);
         if (entry.commit)
             title += " (committed as r" + entry.commit + ")";
@@ -164,7 +168,7 @@ function setChromiumQueue(queue) {
         }
         if (entry.summary)
             title += "\n" + entry.summary;
-        var text = entry.bug || ("[" + entry.id + "]") ;
+        var text = entry.bug || ("[" + entry.id + "]");
         $('<a target="_new"></a>').text(text).attr('href', url)
             .attr('title', title)
             .appendTo(span);
@@ -302,7 +306,7 @@ function setWebkitCommits(feed) {
     refreshProgress();
 }
 
-function setChromiumLKGR(lkgr) {
+function setChromiumLKGR(lkgr, initializing) {
     LOADING_STATUS.haveChromiumLKGR = true;
     console.log("LKGR = ", lkgr);
     fadeShow($('#chromium-lkgr'), lkgr);
