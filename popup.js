@@ -87,7 +87,6 @@ function setWebkitVersion(webkit_version, chromium_version) {
     chromium_version = chromium_version || "";
     fadeShow($('#chromium-webkit-version'), chromium_version);
     refreshProgress();
-    updateVersionBehind();
 };
 
 function setWebkitQueue(queue) {
