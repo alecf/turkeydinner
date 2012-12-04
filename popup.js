@@ -4,6 +4,7 @@ var LOADING_STATUS = {
     haveWebkitQueue: true,
     haveChromiumQueue: true,
     haveChromiumLKGR: true,
+    haveWebkitGardeners: true,
 };
 var backgroundPage = chrome.extension.getBackgroundPage();
 
@@ -19,6 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     setWebkitCommits(backgroundPage.feed);
     setChromiumLKGR(backgroundPage.buildStatus.chromium_lkgr);
+    setWebkitGardners(backgroundPage.buildStatus.webkit_gardeners);
 
     // hook up other event listeners
     $('#refresh-button').click(function() {
@@ -48,7 +50,7 @@ function refreshAll() {
     for (var k in LOADING_STATUS)
         LOADING_STATUS[k] = false;
     refreshProgress();
-    backgroundPage.refresh(setWebkitVersion, setWebkitCommits, setWebkitQueue, setChromiumQueue, setChromiumLKGR);
+    backgroundPage.refresh(setWebkitVersion, setWebkitCommits, setWebkitQueue, setChromiumQueue, setChromiumLKGR, setWebkitGardeners);
 }
 
 function refreshProgress() {
@@ -306,4 +308,14 @@ function setChromiumLKGR(lkgr) {
     LOADING_STATUS.haveChromiumLKGR = true;
     console.log("LKGR = ", lkgr);
     fadeShow($('#chromium-lkgr'), lkgr);
+}
+
+function setGardeners(gardeners) {
+    LOADING_STATUS.haveWebkitGardeners = true;
+    console.log("gardeners = ", gardeners);
+    var gardenerSpan = $('<span>');
+    gardeners.forEach(function(gardener) {
+        $('<span>').text(gardener).appendTo(gardenerSpan);
+        });
+    fadeShow($('#webkit-gardeners'), gardenerSpan);
 }
