@@ -33,7 +33,7 @@ function requestChromiumVersionForWebkitRoll(webkitVersion, callback) {
 
                         // at least has to mention webkit
                         if (!/webkit/i.exec(comments))
-                            return;
+                            return true;
                         // this is cheezy - we could possibly request the rss feed for the issue, then
                         // look at the latest diff in the issue?
                         var match = /(\d+):(\d+)/m.exec(comments);
@@ -69,9 +69,9 @@ function requestFeed(url, callback) {
     if (xhr.readyState == 4) {
       // look in the xml, bleah
 
-      if (callback) {
-        callback(xhr.responseXML);
-      }
+        if (callback) {
+            callback(xhr.responseXML);
+        }
     }
   };
   xhr.send();
@@ -91,14 +91,13 @@ function requestAllChromium(nick, callback) {
 }
 
 function requestChromiumIssue(id, callback) {
-    requestFeed('http://codereview.chromium.org/rss/issue/' + id, callback);
+    requestFeed('https://codereview.chromium.org/rss/issue/' + id, callback);
 }
 
 function requestChromiumList(nick, type, callback) {
-    requestFeed('http://codereview.chromium.org/rss/' + type + '/' + nick, function(doc) {
+    requestFeed('https://codereview.chromium.org/rss/' + type + '/' + nick, function(doc) {
         var result = [];
         var pending = 0;
-
         $('entry', doc).each(function (i, entry) {
             var url = $('link', entry).attr('href');
             var match = /\/(\d+)\//.exec(url);
@@ -136,6 +135,7 @@ function requestChromiumList(nick, type, callback) {
                         }
                         var aborted = /Presubmit ERRORS(.*)/m.exec(summary) ||
                                 /Commit queue rejected this change/m.exec(summary) ||
+                                /Presubmit check.*failed/m.exec(summary) ||
                                 /Sorry for I got bad news for ya/m.exec(summary);
                         if (aborted) {
                             // booh - regexps only go to the end of the current line
@@ -178,7 +178,7 @@ function requestBugzillaFeed(email, callback) {
     xhr.send();
 }
 
-function requestAttachment(url, callback) {
+function requestBugzillaAttachment(url, callback) {
     var xhr = new XMLHttpRequest();
     xhr.open('GET', url + '&ctype=xml');
     console.log("Fetching attachment ", url);
@@ -215,7 +215,7 @@ function requestBugzillaList(email, callback) {
                 var buginfo = {id: match[1], title: title, data: entry};
                 result.push(buginfo);
                 pending++;
-                requestAttachment(url, function(attachments) {
+                requestBugzillaAttachment(url, function(attachments) {
                     buginfo.attachments = attachments;
                     if (--pending == 0) {
                         callback(result);
