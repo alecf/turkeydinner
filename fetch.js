@@ -52,7 +52,7 @@ function convert_feed(doc, callback) {
     }
 }
 
-function refresh(version_callback, feed_callback, queue_callback, chromium_callback, chromium_lkgr_callback) {
+function refresh(version_callback, feed_callback, queue_callback, chromium_callback, chromium_lkgr_callback, gardener_callback) {
     var email = localStorage.getItem("email");
     var review_nick = localStorage.getItem("review-nick");
     console.log("Updating build status to ", new Date());
@@ -97,6 +97,12 @@ function refresh(version_callback, feed_callback, queue_callback, chromium_callb
         buildStatus.chromium_lkgr = lkgr;
         if (chromium_lkgr_callback)
             chromium_lkgr_callback(lkgr);
+    });
+
+    requestWebkitGardeners(function(gardeners) {
+        buildStatus.webkit_gardeners = gardeners;
+        if (webkit_gardener_callback)
+            webkit_gardener_callback(gardeners);
     });
 };
 

@@ -323,3 +323,23 @@ function webkitTracLink(svn_id) {
     var url = 'https://trac.webkit.org/changeset/' + svn_id;
     return '<a href="' + url + '" title="' + url + '">r' + svn_id+ '</a>';
 }
+
+function requestWebKitGardeners(callback) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'https://chromium-build.appspot.com/p/chromium/sheriff_webkit.js');
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState == 4) {
+            var js = xhr.responseText;
+            var match =/document.write\(['"](.*)['"]\)+/.exec(js);
+            if (match) {
+                var names = [];
+                var nameList = match[1].split(',').forEach(
+                    function(s) { names.push(s.trim()); });
+                callback(names);
+            } else {
+                callback([]);
+            }
+        }
+
+    };
+}
