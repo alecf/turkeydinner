@@ -52,7 +52,7 @@ function convert_feed(doc, callback) {
     }
 }
 
-function refresh(version_callback, feed_callback, queue_callback, chromium_callback, chromium_lkgr_callback, gardener_callback) {
+function refresh(version_callback, feed_callback, queue_callback, chromium_callback, chromium_lkgr_callback, webkit_gardener_callback) {
     var email = localStorage.getItem("email");
     var review_nick = localStorage.getItem("review-nick");
     console.log("Updating build status to ", new Date());
@@ -84,7 +84,7 @@ function refresh(version_callback, feed_callback, queue_callback, chromium_callb
     }
 
     if (review_nick) {
-        requestAllChromium(review_nick, function(reviews) {
+        requestAllChromiumQueues(review_nick, function(reviews) {
             buildStatus.chromium_queue = reviews;
             if (chromium_callback)
                 chromium_callback(reviews);

@@ -11,10 +11,11 @@
   "background": { "scripts": ["jquery-1.8.0.min.js", "linkify.js", "shared.js", "fetch.js"] },
   
   "permissions": [
-      "http://git.chromium.org/",
       "http://codereview.chromium.org/",
-      "https://codereview.chromium.org/",
+      "http://git.chromium.org/",
       "http://webkit-commit-queue.appspot.com/",
-      "https://chromium-status.appspot.com/"
+      "https://chromium-build.appspot.com/",
+      "https://chromium-status.appspot.com/",
+      "https://codereview.chromium.org/"
   ]
 }

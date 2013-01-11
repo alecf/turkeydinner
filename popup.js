@@ -1,10 +1,10 @@
 var LOADING_STATUS = {
-    haveWebkitCommits: true,
-    haveWebkitVersion: true,
-    haveWebkitQueue: true,
-    haveChromiumQueue: true,
     haveChromiumLKGR: true,
+    haveChromiumQueue: true,
+    haveWebkitCommits: true,
     haveWebkitGardeners: true,
+    haveWebkitQueue: true,
+    haveWebkitVersion: true,
 };
 var backgroundPage = chrome.extension.getBackgroundPage();
 
@@ -13,14 +13,14 @@ window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL ||
 
 document.addEventListener('DOMContentLoaded', function() {
     setWebkitVersion(backgroundPage.buildStatus.webkit_version,
-                        backgroundPage.buildStatus.chromium_webkit_version);
+                     backgroundPage.buildStatus.chromium_webkit_version);
 
     setWebkitQueue(backgroundPage.buildStatus.queue);
     setChromiumQueue(backgroundPage.buildStatus.chromium_queue);
 
     setWebkitCommits(backgroundPage.feed);
     setChromiumLKGR(backgroundPage.buildStatus.chromium_lkgr);
-    setWebkitGardners(backgroundPage.buildStatus.webkit_gardeners);
+    setWebkitGardeners(backgroundPage.buildStatus.webkit_gardeners);
 
     // hook up other event listeners
     $('#refresh-button').click(function() {
@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function refreshAll() {
+    console.log("Loading status: ", LOADING_STATUS);
     for (var k in LOADING_STATUS)
         LOADING_STATUS[k] = false;
     refreshProgress();
@@ -77,12 +78,22 @@ function fadeShow($elmt, text) {
     var background = $elmt.css('background-color');
 
     var wasEmpty = !$elmt.text();
-    console.log("Existing text for ", $elmt, ": ", $elmt.text(), " = ", wasEmpty);
-    if ($elmt.text() != text) {
-        $elmt.text(text);
-        if (!wasEmpty)
-            $elmt.animate({ backgroundColor: '#f00' }, 100)
+    // this is ugly - would like to unify this without having to
+    // resort to type checking :(
+    if (!text || typeof text == "string" || typeof text == "number") {
+        if ($elmt.text() != text) {
+            $elmt.text(text);
+            if (!wasEmpty)
+                $elmt.animate({ backgroundColor: '#f00' }, 100)
             .animate({ backgroundColor: '#fff' }, 1000);
+        }
+    } else {
+        if ($elmt.text() != text.text()) {
+            $elmt.empty().append(text);
+            if (!wasEmpty)
+                $elmt.animate({ backgroundColor: '#f00' }, 100)
+                .animate({ backgroundColor: '#fff' }, 1000);
+        }
     }
     return $elmt;
 }
@@ -314,12 +325,17 @@ function setChromiumLKGR(lkgr, initializing) {
     fadeShow($('#chromium-lkgr'), lkgr);
 }
 
-function setGardeners(gardeners) {
+function setWebkitGardeners(gardeners) {
     LOADING_STATUS.haveWebkitGardeners = true;
-    console.log("gardeners = ", gardeners);
+    if (!gardeners)
+        return;
     var gardenerSpan = $('<span>');
     gardeners.forEach(function(gardener) {
-        $('<span>').text(gardener).appendTo(gardenerSpan);
+        $('<span><a target="_new"></a></span>')
+            .children('a').text(gardener.nick).attr('href', 'https://codereview.chromium.org/user/' + gardener.nick)
+            .parent().append('(' + gardener.queue.length + ') ')
+            .appendTo(gardenerSpan);
         });
     fadeShow($('#webkit-gardeners'), gardenerSpan);
+    refreshProgress();
 }

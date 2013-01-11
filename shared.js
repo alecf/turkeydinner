@@ -34,6 +34,18 @@ function requestChromiumVersionForWebkitRoll(webkitVersion, callback) {
                         // at least has to mention webkit
                         if (!/webkit/i.exec(comments))
                             return true;
+
+                        // // find the diff URL
+                        // var diff_url = $('content', entry).find('a[title="diff"]').attr('href');
+                        // if (diff_url) {
+                        //     diff_url = diff_url.replace('blobdiff', 'blobdiff_raw');
+
+                        //     $.get(diff_url)
+                        //         .success(function(data) {
+                        //             var match = /\+.*webkit_revision[^\d]+(\d+)/.exec(data);
+                        //             if (match) {...}
+                        //         });
+
                         // this is cheezy - we could possibly request the rss feed for the issue, then
                         // look at the latest diff in the issue?
                         var match = /(\d+):(\d+)/m.exec(comments);
@@ -47,7 +59,8 @@ function requestChromiumVersionForWebkitRoll(webkitVersion, callback) {
                                     callback(webkitVersion, svn_match ? svn_match[1] : "???");
                                 return false;
                             }
-                        }
+                        } else
+                        console.log("No revision in ", comments);
                         // var match = /Review URL:\s+https:\/\/chromiumcodereview.appspot.com\/(\d+)/m.exec(comments);
                         // if (match) {
                         //     var id = match[1];
@@ -78,10 +91,10 @@ function requestFeed(url, callback) {
 
 }
 
-function requestAllChromium(nick, callback) {
+function requestAllChromiumQueues(nick, callback) {
     // super cheesy, not parallel right now
-    requestChromiumList(nick, 'mine', function(mine) {
-        requestChromiumList(nick, 'closed', function(closed) {
+    requestChromiumQueue(nick, 'mine', function(mine) {
+        requestChromiumQueue(nick, 'closed', function(closed) {
             console.log("DONE with all chromium: ", mine.concat(closed));
             var full_list = mine.concat(closed);
             full_list.sort(function(a, b) { return b.timestamp.localeCompare(a.timestamp); });
@@ -94,7 +107,7 @@ function requestChromiumIssue(id, callback) {
     requestFeed('https://codereview.chromium.org/rss/issue/' + id, callback);
 }
 
-function requestChromiumList(nick, type, callback) {
+function requestChromiumQueue(nick, type, callback) {
     requestFeed('https://codereview.chromium.org/rss/' + type + '/' + nick, function(doc) {
         var result = [];
         var pending = 0;
@@ -324,22 +337,42 @@ function webkitTracLink(svn_id) {
     return '<a href="' + url + '" title="' + url + '">r' + svn_id+ '</a>';
 }
 
-function requestWebKitGardeners(callback) {
+function requestWebkitGardeners(callback) {
+    console.log("Getting gardeners...");
     var xhr = new XMLHttpRequest();
     xhr.open('GET', 'https://chromium-build.appspot.com/p/chromium/sheriff_webkit.js');
     xhr.onreadystatechange = function() {
+        console.log("Gardener ready...?", xhr.readyState);
         if (xhr.readyState == 4) {
             var js = xhr.responseText;
+            console.log("Got a gardener: ", js);
             var match =/document.write\(['"](.*)['"]\)+/.exec(js);
+            var pending = 0;
             if (match) {
-                var names = [];
-                var nameList = match[1].split(',').forEach(
-                    function(s) { names.push(s.trim()); });
-                callback(names);
-            } else {
-                callback([]);
-            }
-        }
+                var result = [];
+                match[1].split(',').forEach(
+                    function(s) {
+                        var gardener = {nick: s.trim() };
+                        result.push(gardener);
+                        pending++;
+                        requestChromiumQueue(gardener.nick, 'mine', function(queue) {
+                            gardener.queue = [];
+                            for (var i = 0; i < queue.length; i++) {
+                                var roll_match = /Roll WebKit (\d+):(\d+)/i.exec(queue[i].summary);
+                                if (roll_match) {
+                                    gardener.queue.push(queue[i]);
+                                }
+                            }
+                            console.log(gardener.nick + "'s queue: ", gardener.queue);
 
+                            if (--pending == 0)
+                                callback(result);
+                        });
+                    });
+            }
+            if (!pending)
+                callback([]);
+        }
     };
+    xhr.send();
 }
