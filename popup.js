@@ -171,11 +171,11 @@ function setChromiumQueue(queue) {
         var title = entry.bug ? ("Chromium Bug #" + entry.bug) : ("Chromium Patch " + entry.id);
         if (entry.commit)
             title += " (committed as r" + entry.commit + ")";
-        else if (entry.aborted) {
+        else if (entry.status != 'closed' && entry.aborted) {
             title += "\n" + entry.aborted;
             span.addClass('aborted');
         }
-        else if (entry.cqUrl) {
+        else if (entry.status != 'closed' && entry.cqUrl) {
             span.addClass('pending');
             title += " (in commit queue)";
         }
@@ -327,6 +327,7 @@ function setChromiumLKGR(lkgr, initializing) {
 
 function setWebkitGardeners(gardeners) {
     LOADING_STATUS.haveWebkitGardeners = true;
+    console.log("gardeners = ", gardeners);
     if (!gardeners)
         return;
     var gardenerSpan = $('<span>');

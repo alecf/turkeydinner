@@ -93,8 +93,10 @@ function requestFeed(url, callback) {
 
 function requestAllChromiumQueues(nick, callback) {
     // super cheesy, not parallel right now
-    requestChromiumQueue(nick, 'mine', function(mine) {
-        requestChromiumQueue(nick, 'closed', function(closed) {
+    requestChromiumList(nick, 'mine', function(mine) {
+        mine.forEach(function(entry) { entry.status = 'mine'; });
+        requestChromiumList(nick, 'closed', function(closed) {
+            closed.forEach(function(entry) { entry.status = 'closed'; });
             console.log("DONE with all chromium: ", mine.concat(closed));
             var full_list = mine.concat(closed);
             full_list.sort(function(a, b) { return b.timestamp.localeCompare(a.timestamp); });
@@ -149,6 +151,7 @@ function requestChromiumQueue(nick, type, callback) {
                         var aborted = /Presubmit ERRORS(.*)/m.exec(summary) ||
                                 /Commit queue rejected this change/m.exec(summary) ||
                                 /Presubmit check.*failed/m.exec(summary) ||
+                                /Failed to apply patch/m.exec(summary) ||
                                 /Sorry for I got bad news for ya/m.exec(summary);
                         if (aborted) {
                             // booh - regexps only go to the end of the current line
