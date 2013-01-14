@@ -93,9 +93,9 @@ function requestFeed(url, callback) {
 
 function requestAllChromiumQueues(nick, callback) {
     // super cheesy, not parallel right now
-    requestChromiumList(nick, 'mine', function(mine) {
+    requestChromiumQueue(nick, 'mine', function(mine) {
         mine.forEach(function(entry) { entry.status = 'mine'; });
-        requestChromiumList(nick, 'closed', function(closed) {
+        requestChromiumQueue(nick, 'closed', function(closed) {
             closed.forEach(function(entry) { entry.status = 'closed'; });
             console.log("DONE with all chromium: ", mine.concat(closed));
             var full_list = mine.concat(closed);
