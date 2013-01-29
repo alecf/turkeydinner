@@ -360,8 +360,12 @@ function requestWebkitGardeners(callback) {
                         pending++;
                         requestChromiumQueue(gardener.nick, 'mine', function(queue) {
                             gardener.queue = [];
+                            console.log("Checking gardener: ", gardener.nick);
                             for (var i = 0; i < queue.length; i++) {
-                                var roll_match = /Roll WebKit (\d+):(\d+)/i.exec(queue[i].summary);
+                                console.log("  queue[" + i + "]: ", queue[i]);
+                                var roll_match =
+                                        /Roll WebKit (\d+):(\d+)/i.exec(queue[i].summary) ||
+                                        /Webkit roll (\d+):(\d+)/i.exec(queue[i].summary);
                                 if (roll_match) {
                                     gardener.queue.push(queue[i]);
                                 }
