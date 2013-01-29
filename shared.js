@@ -258,7 +258,7 @@ function requestQueuePage(callback) {
     xhr.send();
 }
 
-function requestQueueList(callback) {
+function requestWebkitCommitQueueList(callback) {
     requestQueuePage(function(doc) {
         var result = [];
         var rows = $('tr', doc);
@@ -305,17 +305,17 @@ function maybeRun(bugList, queueList, callback) {
 }
 
 
-function requestQueuePositions(email, callback) {
+function requestWebkitCommitQueuePositions(email, callback) {
     var queueList, bugList;
-    requestQueueList(function(q) {
-        console.log("DONE with queue: ", q);
+    requestWebkitQueueList(function(q) {
+        console.log("DONE with webkit commit queue: ", q);
         queueList = q;
         maybeRun(bugList, queueList, callback);
     });
 
     if (email) {
         requestBugzillaList(email, function(b) {
-            console.log("DONE with bugs", b);
+            console.log("DONE with " + email + "'s bugs", b);
             bugList = b;
             maybeRun(bugList, queueList, callback);
         });

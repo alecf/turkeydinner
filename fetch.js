@@ -74,7 +74,7 @@ function refresh(version_callback, feed_callback, queue_callback, chromium_callb
         convert_feed(doc, feed_callback);
     });
     if (email) {
-        requestQueuePositions(email, function(queue) {
+        requestWebkitCommitQueuePositions(email, function(queue) {
         buildStatus.queue = queue;
         if (queue_callback)
             queue_callback(queue);
