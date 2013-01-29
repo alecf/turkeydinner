@@ -97,8 +97,8 @@ function requestAllChromiumQueues(nick, callback) {
         mine.forEach(function(entry) { entry.status = 'mine'; });
         requestChromiumQueue(nick, 'closed', function(closed) {
             closed.forEach(function(entry) { entry.status = 'closed'; });
-            console.log("DONE with all chromium: ", mine.concat(closed));
             var full_list = mine.concat(closed);
+            console.log("DONE with " + nick + "'s chromium queue: ", full_list);
             full_list.sort(function(a, b) { return b.timestamp.localeCompare(a.timestamp); });
             callback(full_list);
         });
@@ -257,7 +257,6 @@ function requestBugzillaAttachment(url, callback) {
     xhr.onreadystatechange = function() {
         var result = [];
         if (xhr.readyState == 4) {
-            console.log("Attachment ready ", url);
             var doc = $(xhr.responseXML);
             $('attachment[isobsolete=0]', doc).each(function(i, attachment) {
                 var flags = {};
@@ -363,7 +362,7 @@ function maybeRun(bugList, queueList, callback) {
 
 function requestWebkitCommitQueuePositions(email, callback) {
     var queueList, bugList;
-    requestWebkitQueueList(function(q) {
+    requestWebkitCommitQueueList(function(q) {
         console.log("DONE with webkit commit queue: ", q);
         queueList = q;
         maybeRun(bugList, queueList, callback);
@@ -401,10 +400,8 @@ function requestWebkitGardeners(callback) {
     var xhr = new XMLHttpRequest();
     xhr.open('GET', 'https://chromium-build.appspot.com/p/chromium/sheriff_webkit.js');
     xhr.onreadystatechange = function() {
-        console.log("Gardener ready...?", xhr.readyState);
         if (xhr.readyState == 4) {
             var js = xhr.responseText;
-            console.log("Got a gardener: ", js);
             var match =/document.write\(['"](.*)['"]\)+/.exec(js);
             var pending = 0;
             if (match) {
@@ -418,7 +415,6 @@ function requestWebkitGardeners(callback) {
                             gardener.queue = [];
                             console.log("Checking gardener: ", gardener.nick);
                             for (var i = 0; i < queue.length; i++) {
-                                console.log("  queue[" + i + "]: ", queue[i]);
                                 var roll_match =
                                         /Roll WebKit (\d+):(\d+)/i.exec(queue[i].summary) ||
                                         /Webkit roll (\d+):(\d+)/i.exec(queue[i].summary);

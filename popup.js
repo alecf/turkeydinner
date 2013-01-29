@@ -15,10 +15,10 @@ document.addEventListener('DOMContentLoaded', function() {
     setWebkitVersion(backgroundPage.buildStatus.webkit_version,
                      backgroundPage.buildStatus.chromium_webkit_version);
 
-    setWebkitQueue(backgroundPage.buildStatus.queue);
+    setWebkitQueue(backgroundPage.buildStatus.webkit_queue);
     setChromiumQueue(backgroundPage.buildStatus.chromium_queue);
 
-    setWebkitCommits(backgroundPage.feed);
+    setWebkitCommits(backgroundPage.buildStatus.webkit_feed);
     setChromiumLKGR(backgroundPage.buildStatus.chromium_lkgr);
     setWebkitGardeners(backgroundPage.buildStatus.webkit_gardeners);
 
@@ -203,13 +203,14 @@ function setChromiumQueue(queue) {
 
 }
 
-function setWebkitCommits(feed) {
+function setWebkitCommits(webkit_feed) {
     LOADING_STATUS.haveWebkitCommits = true;
-    var entries = feed.entries;
+    var entries = webkit_feed.entries;
     var feedRow = $('#feed-entries');
     feedRow.empty();
 
     var webkit_version = backgroundPage.buildStatus.webkit_version;
+    var next_roll = backgroundPage.buildStatus.webkit_next_roll;
     var pending = 0;
     var landed = 0;
     var first_landed;

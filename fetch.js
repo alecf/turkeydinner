@@ -2,10 +2,41 @@
  * Background page stuff
  */
 buildStatus = {};
-feed = {
-  entries: [],
-  rawdoc: null,
-};
+
+var listeners = [];
+function addRefreshListener(listener) {
+    notifyListener(listener);
+    listeners.push(listener);
+}
+
+function notifyListener(listener) {
+    if (buildStatus.webkit_version || buildStatus.chromium_webkit_version) {
+        listener.onVersionsReady(buildStatus.webkit_version, buildStatus.chromium_webkit_version);
+    }
+
+    if (buildStatus.webkit_queue) {
+        listener.onWebkitQueue(buildStatus.webkit_queue);
+    }
+
+    if (buildStatus.chromium_queue) {
+        listener.onChromiumQueue(buildStatus.chromium_queue);
+    }
+
+    if (buildStatus.webkit_commits) {
+        listener.onWebkitCommits(buildStatus.webkit_commits);
+    }
+
+    if (buildStatus.chromium_lkgr) {
+        listener.onChromiumLgkr(buildStatus.chromium_lkgr);
+    }
+
+    if (buildStatus.webkit_gardeners) {
+        listener.onWebkitGardeners(buildStatus.webkit_gardeners);
+    }
+
+    // all data is ready
+    listener.onDataReady();
+}
 
 function refresh(version_callback, webkit_commit_callback, queue_callback, chromium_callback, chromium_lkgr_callback, webkit_gardener_callback) {
     var email = localStorage.getItem("email");
@@ -26,18 +57,22 @@ function refresh(version_callback, webkit_commit_callback, queue_callback, chrom
         }
     });
     requestWebkitCommits(function(feeddata) {
-        feed = feeddata;
+        console.log("requestWebkitCommits");
+        buildStatus.webkit_feed = feeddata;
         if (webkit_commit_callback)
-            webkit_commit_callback(feed);
+            webkit_commit_callback(feeddata);
     });
 
     if (email) {
+        console.log("requestWebkitQueuePositions");
         requestWebkitCommitQueuePositions(email, function(queue) {
-        buildStatus.queue = queue;
-        if (queue_callback)
-            queue_callback(queue);
+            console.log("Have webkit queue: ", queue);
+            buildStatus.webkit_queue = queue;
+            if (queue_callback)
+                queue_callback(queue);
         });
     } else if (queue_callback) {
+        console.log("no email, no webkit queue");
         queue_callback([]);
     }
 
