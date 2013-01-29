@@ -54,6 +54,19 @@ function refreshAll() {
     backgroundPage.refresh(setWebkitVersion, setWebkitCommits, setWebkitQueue, setChromiumQueue, setChromiumLKGR, setWebkitGardeners);
 }
 
+function pieChart(span, data) {
+    console.log("entering pieChart(", span, ", ", data);
+    var data2 = google.visualization.arrayToDataTable(data);
+    var span2 = $('<span class="piechart">').appendTo(span).get(0);
+    console.log("    span = ", span);
+    console.log("    data = ", data);
+    google.setOnLoadCallback(function() {
+        console.log("span ", span2, " -> draw ", data2);
+        new google.visualization.PieChart(span2)
+            .draw(data2, {title: "Progress.."});
+    });
+}
+
 function refreshProgress() {
     var fullyLoaded = true;
     var loaded = 0;
@@ -178,6 +191,7 @@ function setChromiumQueue(queue) {
         else if (entry.status != 'closed' && entry.cqUrl) {
             span.addClass('pending');
             title += " (in commit queue)";
+            pieChart(span, [['Commits', 'bots'], ['Green', 5], ['Yellow', 2]]);
         }
         if (entry.summary)
             title += "\n" + entry.summary;

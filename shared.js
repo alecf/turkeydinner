@@ -174,12 +174,68 @@ function requestChromiumQueue(nick, type, callback) {
     });
 }
 
-function requestChromiumFeed(callback) {
-  return requestFeed('http://git.chromium.org/gitweb/?p=chromium.git;a=atom;h=refs/heads/trunk', callback);
+function convertChromiumFeed(doc, callback) {
+
 }
 
-function requestWebkitFeed(callback) {
-  return requestFeed('http://git.chromium.org/gitweb/?p=external/WebKit_trimmed.git;a=atom;h=refs/heads/master', callback);
+function requestChromiumCommits(callback) {
+    return requestFeed('http://git.chromium.org/gitweb/?p=chromium.git;a=atom;h=refs/heads/trunk', function(doc) {
+        return convertChromiumFeed(doc, callback);
+    });
+}
+
+/**
+ * Convert webkit commit feed into something useful (read: non-xml) anotated with links/etc
+ */
+function convertWebkitFeed(doc, callback) {
+    var feed = { entries: [], rawdoc: doc };
+    var entries = [];
+    $('entry', doc).each(function(i) {
+      var text = $('content pre', this).text();
+      var entry = {
+        text: text,
+        updated: $('updated:first', this).text()
+      };
+
+      var time = $('updated', this).text();
+
+      var bug = /bugs.webkit.org\/show_bug.cgi\?id=(\d+)/g.exec(text);
+      if (bug) {
+        entry.bug = bug[1];
+      }
+
+      var svn_id = /git-svn-id:.*@(\d+) /g.exec(text);
+      if (svn_id) {
+        entry.svn_id = parseInt(svn_id[1]);
+      }
+
+      var author = $('author name', this).text();
+      if (author) {
+        entry.author = author;
+      }
+
+      var patch_by = /Patch by.*<(.*@.*)>/.exec(text);
+      if (patch_by) {
+        entry.patch_by = patch_by[1];
+      }
+
+      entry.title = $('title:first', this).text();
+      var title_end = text.indexOf("\n\n");
+      if (title_end) {
+        entry.title = text.slice(0, title_end).trim();
+      }
+      entries.push(entry);
+    });
+    feed.entries = entries;
+    if (callback) {
+      callback(feed);
+    }
+}
+
+function requestWebkitCommits(callback) {
+    return requestFeed('http://git.chromium.org/gitweb/?p=external/WebKit_trimmed.git;a=atom;h=refs/heads/master', function(doc) {
+        return convertWebkitFeed(doc, callback);
+    });
 }
 
 function requestBugzillaFeed(email, callback) {
