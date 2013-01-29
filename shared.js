@@ -314,7 +314,7 @@ function requestQueuePage(callback) {
     xhr.send();
 }
 
-function requestQueueList(callback) {
+function requestWebkitCommitQueueList(callback) {
     requestQueuePage(function(doc) {
         var result = [];
         var rows = $('tr', doc);
@@ -361,17 +361,17 @@ function maybeRun(bugList, queueList, callback) {
 }
 
 
-function requestQueuePositions(email, callback) {
+function requestWebkitCommitQueuePositions(email, callback) {
     var queueList, bugList;
-    requestQueueList(function(q) {
-        console.log("DONE with queue: ", q);
+    requestWebkitQueueList(function(q) {
+        console.log("DONE with webkit commit queue: ", q);
         queueList = q;
         maybeRun(bugList, queueList, callback);
     });
 
     if (email) {
         requestBugzillaList(email, function(b) {
-            console.log("DONE with bugs", b);
+            console.log("DONE with " + email + "'s bugs", b);
             bugList = b;
             maybeRun(bugList, queueList, callback);
         });
@@ -416,8 +416,12 @@ function requestWebkitGardeners(callback) {
                         pending++;
                         requestChromiumQueue(gardener.nick, 'mine', function(queue) {
                             gardener.queue = [];
+                            console.log("Checking gardener: ", gardener.nick);
                             for (var i = 0; i < queue.length; i++) {
-                                var roll_match = /Roll WebKit (\d+):(\d+)/i.exec(queue[i].summary);
+                                console.log("  queue[" + i + "]: ", queue[i]);
+                                var roll_match =
+                                        /Roll WebKit (\d+):(\d+)/i.exec(queue[i].summary) ||
+                                        /Webkit roll (\d+):(\d+)/i.exec(queue[i].summary);
                                 if (roll_match) {
                                     gardener.queue.push(queue[i]);
                                 }

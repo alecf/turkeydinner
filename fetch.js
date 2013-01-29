@@ -32,7 +32,7 @@ function refresh(version_callback, webkit_commit_callback, queue_callback, chrom
     });
 
     if (email) {
-        requestQueuePositions(email, function(queue) {
+        requestWebkitCommitQueuePositions(email, function(queue) {
         buildStatus.queue = queue;
         if (queue_callback)
             queue_callback(queue);
