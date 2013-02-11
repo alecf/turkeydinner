@@ -54,17 +54,22 @@ function refreshAll() {
     backgroundPage.refresh(setWebkitVersion, setWebkitCommits, setWebkitQueue, setChromiumQueue, setChromiumLKGR, setWebkitGardeners);
 }
 
+var chart_loaded = false;
 function pieChart(span, data) {
     console.log("entering pieChart(", span, ", ", data);
     var data2 = google.visualization.arrayToDataTable(data);
     var span2 = $('<span class="piechart">').appendTo(span).get(0);
     console.log("    span = ", span);
     console.log("    data = ", data);
-    google.setOnLoadCallback(function() {
+    function draw_chart() {
         console.log("span ", span2, " -> draw ", data2);
-        new google.visualization.PieChart(span2)
-            .draw(data2, {title: "Progress.."});
-    });
+        var chart = new google.visualization.PieChart(span2);
+        chart.draw(data2);
+    }
+    if (!chart_loaded)
+        google.setOnLoadCallback(draw_chart);
+    else
+        draw_chart();
 }
 
 function refreshProgress() {
@@ -342,14 +347,31 @@ function setChromiumLKGR(lkgr, initializing) {
 
 function setWebkitGardeners(gardeners) {
     LOADING_STATUS.haveWebkitGardeners = true;
-    console.log("gardeners = ", gardeners);
+    // console.log("gardeners = ", gardeners);
     if (!gardeners)
         return;
     var gardenerSpan = $('<span>');
     gardeners.forEach(function(gardener) {
+        var max_rev = "";
+        var max_rev_bug;
+        gardener.queue.forEach(function(entry) {
+            if (entry.end > max_rev) {
+                max_rev = entry.end;
+                max_rev_bug = entry.id;
+            }
+        });
+        var gardener_note = '&nbsp;(' + gardener.queue.length + ')&nbsp;';
+        if (max_rev) {
+            if (gardener.queue.length == 1)
+                gardener_note = $('<span>&nbsp;(<a target="_new" href="https://codereview.chromium.org/' +
+                                  max_rev_bug + '">next roll</a> probably r' + max_rev+ ')&nbsp;</span>');
+            else
+                gardener_note = $('<span>&nbsp;(<a target="_new" href="https://codereview.chromium.org/' +
+                                  max_rev_bug + '">next roll</a> <i>may be</i> r' + max_rev+ ')&nbsp;</span>');
+        }
         $('<span><a target="_new"></a></span>')
             .children('a').text(gardener.nick).attr('href', 'https://codereview.chromium.org/user/' + gardener.nick)
-            .parent().append('(' + gardener.queue.length + ') ')
+            .parent().append(gardener_note)
             .appendTo(gardenerSpan);
         });
     fadeShow($('#webkit-gardeners'), gardenerSpan);

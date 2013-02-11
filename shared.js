@@ -419,6 +419,8 @@ function requestWebkitGardeners(callback) {
                                         /Roll WebKit (\d+):(\d+)/i.exec(queue[i].summary) ||
                                         /Webkit roll (\d+):(\d+)/i.exec(queue[i].summary);
                                 if (roll_match) {
+                                    queue[i].start = roll_match[1];
+                                    queue[i].end = roll_match[2];
                                     gardener.queue.push(queue[i]);
                                 }
                             }
