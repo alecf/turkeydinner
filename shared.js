@@ -1,7 +1,7 @@
 function requestWebkitVersion(callback) {
   // first request the latest version out of the git repository
   var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'http://git.chromium.org/gitweb/?p=chromium/src.git;a=blob_plain;f=DEPS;hb=refs/heads/master');
+    xhr.open('GET', 'https://git.chromium.org/gitweb/?p=chromium/src.git;a=blob_plain;f=DEPS;hb=refs/heads/master');
     console.log("Trying to set badge text on ", chrome, ".", chrome.browserAction);
     if (chrome.browserAction)
         chrome.browserAction.setBadgeText({"text": "..."});
@@ -25,7 +25,7 @@ function requestWebkitVersion(callback) {
 
 
 function requestChromiumVersionForWebkitRoll(webkitVersion, callback) {
-    requestFeed('http://git.chromium.org/gitweb/?p=chromium/src.git;a=atom;f=DEPS;h=refs/heads/master',
+    requestFeed('https://git.chromium.org/gitweb/?p=chromium/src.git;a=atom;f=DEPS;h=refs/heads/master',
                 function(feed) {
                     var found = false;
                     $('entry', feed).each(function(i, entry) {
@@ -179,7 +179,7 @@ function convertChromiumFeed(doc, callback) {
 }
 
 function requestChromiumCommits(callback) {
-    return requestFeed('http://git.chromium.org/gitweb/?p=chromium.git;a=atom;h=refs/heads/trunk', function(doc) {
+    return requestFeed('https://git.chromium.org/gitweb/?p=chromium.git;a=atom;h=refs/heads/trunk', function(doc) {
         return convertChromiumFeed(doc, callback);
     });
 }
@@ -233,7 +233,7 @@ function convertWebkitFeed(doc, callback) {
 }
 
 function requestWebkitCommits(callback) {
-    return requestFeed('http://git.chromium.org/gitweb/?p=external/WebKit_trimmed.git;a=atom;h=refs/heads/master', function(doc) {
+    return requestFeed('https://git.chromium.org/gitweb/?p=external/WebKit_trimmed.git;a=atom;h=refs/heads/master', function(doc) {
         return convertWebkitFeed(doc, callback);
     });
 }
@@ -304,7 +304,7 @@ function requestBugzillaList(email, callback) {
 
 function requestQueuePage(callback) {
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'http://webkit-commit-queue.appspot.com/queue-status/commit-queue');
+    xhr.open('GET', 'https://webkit-commit-queue.appspot.com/queue-status/commit-queue');
     xhr.onreadystatechange = function() {
         if (xhr.readyState == 4) {
             callback($(xhr.responseText));
@@ -392,7 +392,7 @@ function requestChromiumLKGR(callback) {
 
 function webkitTracLink(svn_id) {
     var url = 'https://trac.webkit.org/changeset/' + svn_id;
-    return '<a href="' + url + '" title="' + url + '">r' + svn_id+ '</a>';
+    return '<a href="' + url + '" title="' + url + '" target="_new">r' + svn_id+ '</a>';
 }
 
 function requestWebkitGardeners(callback) {
@@ -413,11 +413,13 @@ function requestWebkitGardeners(callback) {
                         pending++;
                         requestChromiumQueue(gardener.nick, 'mine', function(queue) {
                             gardener.queue = [];
-                            console.log("Checking gardener: ", gardener.nick);
+                            console.log("Checking gardener: ", gardener.nick, queue);
                             for (var i = 0; i < queue.length; i++) {
                                 var roll_match =
                                         /Roll WebKit (\d+):(\d+)/i.exec(queue[i].summary) ||
-                                        /Webkit roll (\d+):(\d+)/i.exec(queue[i].summary);
+                                        /Webkit roll (\d+):(\d+)/i.exec(queue[i].summary) ||
+                                        /Webkit roll (\d+)-&gt;(\d+)/i.exec(queue[i].summary);
+;
                                 if (roll_match) {
                                     queue[i].start = roll_match[1];
                                     queue[i].end = roll_match[2];

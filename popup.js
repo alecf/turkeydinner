@@ -159,7 +159,7 @@ function setWebkitQueue(queue) {
             position += " locked: " + entry.locked;
         $('<span>: </span>').appendTo(span);
         $('<a target="turkeydinner-queue"></a>').text(position)
-            .attr('href', 'http://webkit-commit-queue.appspot.com/queue-status/commit-queue')
+            .attr('href', 'https://webkit-commit-queue.appspot.com/queue-status/commit-queue')
             .appendTo(span);
     });
 }
@@ -185,7 +185,7 @@ function setChromiumQueue(queue) {
         if (entry.locked)
             position += " locked: " + entry.locked;
         var span = $('<span class="' + entry.type + ' entry">').appendTo(currentQueueDiv);
-        var url = 'http://codereview.chromium.org/' + entry.id;
+        var url = 'https://codereview.chromium.org/' + entry.id;
         var title = entry.bug ? ("Chromium Bug #" + entry.bug) : ("Chromium Patch " + entry.id);
         if (entry.commit)
             title += " (committed as r" + entry.commit + ")";
@@ -196,7 +196,6 @@ function setChromiumQueue(queue) {
         else if (entry.status != 'closed' && entry.cqUrl) {
             span.addClass('pending');
             title += " (in commit queue)";
-            pieChart(span, [['Commits', 'bots'], ['Green', 5], ['Yellow', 2]]);
         }
         if (entry.summary)
             title += "\n" + entry.summary;
@@ -215,7 +214,17 @@ function setWebkitCommits(webkit_feed) {
     feedRow.empty();
 
     var webkit_version = backgroundPage.buildStatus.webkit_version;
-    var next_roll = backgroundPage.buildStatus.webkit_next_roll;
+
+    var gardeners = backgroundPage.buildStatus.webkit_gardeners;
+    var webkit_next_roll = 0;
+    if (backgroundPage.buildStatus.webkit_gardeners) {
+        for (var i = 0; i < gardeners.length ; i++) {
+            var gardener = gardeners[i];
+            for (var j = 0; j < gardener.queue.length; j++)
+                webkit_next_roll = Math.max(webkit_next_roll, gardener.queue[j].end);
+        }
+    }
+    var webkit_roll_entry;
     var pending = 0;
     var landed = 0;
     var first_landed;
@@ -223,6 +232,9 @@ function setWebkitCommits(webkit_feed) {
     var currentLanded = [];
     var currentPending = [];
     var columns = 0;
+
+    // break up the list of all commits into what is pending (landed
+    // but not rolled) and what has landed and shows up in the roll.
     entries.forEach(function(entry, i) {
         var author;
         if (entry.patch_by) {
@@ -259,6 +271,13 @@ function setWebkitCommits(webkit_feed) {
             }
             pending += 1;
         }
+
+        // the exact SVN id doesn't always appear
+        if (!webkit_roll_entry && webkit_next_roll >= entry.svn_id) {
+            webkit_next_roll = 0;
+            webkit_roll_entry = entry;
+        }
+
         var listItem = $('<td>').attr('title', entry.svn_id);
         if (mine)
             listItem.addClass('mine');
@@ -271,7 +290,9 @@ function setWebkitCommits(webkit_feed) {
         $('<div class="author">').text(author).appendTo(details);
         $('<div class="webkit-trac">').html(webkitTracLink(entry.svn_id)).appendTo(details);
         $('<div class="date">').text(date).appendTo(details);
-        $('<div class="title">').html(linkify(entry.title)).appendTo(details);
+        var title = $("<span>").html(linkify(entry.title));
+        title.find("a").attr("target", "_new");
+        $('<div class="title">').html(title).appendTo(details);
         listItem.appendTo(feedRow);
 
         itembox.hover(
@@ -287,7 +308,13 @@ function setWebkitCommits(webkit_feed) {
     });
 
     $('#chrome-status').empty();
+
     $('tr.rev').remove();
+    if (webkit_roll_entry) {
+        $('<tr class="rev roll"><td colspan=' + webkit_roll_entry.column + '></td><td colspan=20>&#8595;next roll:' + webkit_roll_entry.svn_id + '</td></tr>').insertAfter('#chrome-status');
+
+    }
+    // each commit gets its own rows for a nice stair-step effect
     if (currentLanded.length > 0) {
         var currentLandedDiv = $('.current-landed').empty();
         currentLanded.forEach(function(entry, i) {
@@ -298,7 +325,7 @@ function setWebkitCommits(webkit_feed) {
                 entryRow = $('<tr class="rev"><td colspan=' + entry.column + ' style="text-align: right">' + entry.bug + '</td><td>&#8628;</td></tr>');
             }
             entryRow.insertAfter('#chrome-status');
-            $('<a target="turkeydinner-webkit-svn">').attr('href', 'http://trac.webkit.org/changeset/' + entry.svn_id)
+            $('<a target="turkeydinner-webkit-svn">').attr('href', 'https://trac.webkit.org/changeset/' + entry.svn_id)
                 .addClass('landed entry')
                     .text(entry.bug).appendTo(currentLandedDiv);
         });
@@ -307,6 +334,7 @@ function setWebkitCommits(webkit_feed) {
         $('#webkit-landed-title').hide();
     }
 
+    // Insert last roll
     $('<td>').attr('colspan', pending)
         .text('Chromium')
             .appendTo('#chrome-status');
@@ -326,7 +354,7 @@ function setWebkitCommits(webkit_feed) {
             if (i != 0) {
                 $('<span>, </span>').appendTo(currentPendingDiv);
             }
-            $('<a target="turkeydinner-webkit-svn">').attr('href', 'http://trac.webkit.org/changeset/' + entry.svn_id)
+            $('<a target="turkeydinner-webkit-svn">').attr('href', 'https://trac.webkit.org/changeset/' + entry.svn_id)
                 .addClass('pending entry')
                 .attr('title', entry.title)
                 .text(entry.bug).appendTo(currentPendingDiv);
@@ -370,7 +398,7 @@ function setWebkitGardeners(gardeners) {
                                   max_rev_bug + '">next roll</a> <i>may be</i> r' + max_rev+ ')&nbsp;</span>');
         }
         $('<span><a target="_new"></a></span>')
-            .children('a').text(gardener.nick).attr('href', 'https://codereview.chromium.org/user/' + gardener.nick)
+            .children('a').text(gardener.nick).attr('href', 'https://codereview.chromium.org/user/' + gardener.nick + "@chromium.org")
             .parent().append(gardener_note)
             .appendTo(gardenerSpan);
         });
