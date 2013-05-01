@@ -416,13 +416,13 @@ function requestWebkitGardeners(callback) {
                             console.log("Checking gardener: ", gardener.nick, queue);
                             for (var i = 0; i < queue.length; i++) {
                                 var roll_match =
-                                        /Roll WebKit (\d+):(\d+)/i.exec(queue[i].summary) ||
-                                        /Webkit roll (\d+):(\d+)/i.exec(queue[i].summary) ||
-                                        /Webkit roll (\d+)-&gt;(\d+)/i.exec(queue[i].summary);
+                                        /Roll (webkit|blink) (\d+):(\d+)/i.exec(queue[i].summary) ||
+                                        /(blink|webkit) roll (\d+):(\d+)/i.exec(queue[i].summary) ||
+                                        /(webkit|blink) roll (\d+)-&gt;(\d+)/i.exec(queue[i].summary);
 ;
                                 if (roll_match) {
-                                    queue[i].start = roll_match[1];
-                                    queue[i].end = roll_match[2];
+                                    queue[i].start = roll_match[2];
+                                    queue[i].end = roll_match[3];
                                     gardener.queue.push(queue[i]);
                                 }
                             }
