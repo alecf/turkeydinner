@@ -1,4 +1,4 @@
-function requestWebkitVersion(callback) {
+function requestBlinkVersion(callback) {
   // first request the latest version out of the git repository
   var xhr = new XMLHttpRequest();
     xhr.open('GET', 'https://git.chromium.org/gitweb/?p=chromium/src.git;a=blob_plain;f=DEPS;hb=refs/heads/master');
@@ -14,7 +14,7 @@ function requestWebkitVersion(callback) {
                 var revision = line.indexOf('"webkit_revision":');
                 if (revision != -1) {
                     var val = line.split(":")[1].split('"')[1];
-                    requestChromiumVersionForWebkitRoll(val, callback);
+                    requestChromiumVersionForBlinkRoll(val, callback);
                     break;
                 }
             }
@@ -24,15 +24,15 @@ function requestWebkitVersion(callback) {
 }
 
 
-function requestChromiumVersionForWebkitRoll(webkitVersion, callback) {
+function requestChromiumVersionForBlinkRoll(blinkVersion, callback) {
     requestFeed('https://git.chromium.org/gitweb/?p=chromium/src.git;a=atom;f=DEPS;h=refs/heads/master',
                 function(feed) {
                     var found = false;
                     $('entry', feed).each(function(i, entry) {
                         var comments = $('content', entry).text();
 
-                        // at least has to mention webkit
-                        if (!/webkit/i.exec(comments))
+                        // at least has to mention blink
+                        if (!/blink/i.exec(comments))
                             return true;
 
                         // // find the diff URL
@@ -42,7 +42,7 @@ function requestChromiumVersionForWebkitRoll(webkitVersion, callback) {
 
                         //     $.get(diff_url)
                         //         .success(function(data) {
-                        //             var match = /\+.*webkit_revision[^\d]+(\d+)/.exec(data);
+                        //             var match = /\+.*blink_revision[^\d]+(\d+)/.exec(data);
                         //             if (match) {...}
                         //         });
 
@@ -53,10 +53,10 @@ function requestChromiumVersionForWebkitRoll(webkitVersion, callback) {
                             var from = match[1];
                             var to = match[2];
                             var svn_match = /git-svn-id:\s+svn:\/\/svn.chromium.org\/chrome\/trunk\/src@(\d+)/m.exec(comments);
-                            if (to == webkitVersion) {
+                            if (to == blinkVersion) {
                                 found = true;
                                 if (callback)
-                                    callback(webkitVersion, svn_match ? svn_match[1] : "???");
+                                    callback(blinkVersion, svn_match ? svn_match[1] : "???");
                                 return false;
                             }
                         } else
@@ -69,7 +69,7 @@ function requestChromiumVersionForWebkitRoll(webkitVersion, callback) {
                         // }
                     });
                     if (!found && callback)
-                        callback(webkitVersion);
+                        callback(blinkVersion);
                 });
 }
 
@@ -95,7 +95,6 @@ var status_order = ['mine', 'closed'];
 function sortByStatus(e1, e2) {
     var p1 = status_order.indexOf(e1.status);
     var p2 = status_order.indexOf(e2.status);
-    console.log(e1, "<=>", e2, " => ", p1 - p2);
     return p1 - p2;
 }
 
@@ -103,7 +102,6 @@ function sortChromiumQueue(e1, e2) {
     var result = sortByStatus(e1, e2);
     if (result != 0)
         return result;
-    console.log("    by timestamp: ", e2.timestamp.localeCompare(e1.timestamp));
     return e2.timestamp.localeCompare(e1.timestamp);
 }
 
@@ -201,9 +199,9 @@ function requestChromiumCommits(callback) {
 }
 
 /**
- * Convert webkit commit feed into something useful (read: non-xml) anotated with links/etc
+ * Convert blink commit feed into something useful (read: non-xml) anotated with links/etc
  */
-function convertWebkitFeed(doc, callback) {
+function convertBlinkFeed(doc, callback) {
     var feed = { entries: [], rawdoc: doc };
     var entries = [];
     $('entry', doc).each(function(i) {
@@ -215,7 +213,7 @@ function convertWebkitFeed(doc, callback) {
 
       var time = $('updated', this).text();
 
-      var bug = /bugs.webkit.org\/show_bug.cgi\?id=(\d+)/g.exec(text);
+      var bug = /bugs.blink.org\/show_bug.cgi\?id=(\d+)/g.exec(text);
       if (bug) {
         entry.bug = bug[1];
       }
@@ -248,15 +246,15 @@ function convertWebkitFeed(doc, callback) {
     }
 }
 
-function requestWebkitCommits(callback) {
+function requestBlinkCommits(callback) {
     return requestFeed('https://git.chromium.org/gitweb/?p=external/WebKit_trimmed.git;a=atom;h=refs/heads/master', function(doc) {
-        return convertWebkitFeed(doc, callback);
+        return convertBlinkFeed(doc, callback);
     });
 }
 
 function requestBugzillaFeed(email, callback) {
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'https://bugs.webkit.org/buglist.cgi?bug_status=UNCONFIRMED&bug_status=NEW&bug_status=ASSIGNED&bug_status=REOPENED&emailassigned_to1=1&emailtype1=substring&email1=' + email + '&ctype=atom');
+    xhr.open('GET', 'https://bugs.blink.org/buglist.cgi?bug_status=UNCONFIRMED&bug_status=NEW&bug_status=ASSIGNED&bug_status=REOPENED&emailassigned_to1=1&emailtype1=substring&email1=' + email + '&ctype=atom');
     xhr.onreadystatechange = function() {
         if (xhr.readyState == 4) {
             console.log("Have bugzilla feed.");
@@ -320,32 +318,13 @@ function requestBugzillaList(email, callback) {
 
 function requestQueuePage(callback) {
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'https://webkit-commit-queue.appspot.com/queue-status/commit-queue');
+    xhr.open('GET', 'https://blink-commit-queue.appspot.com/queue-status/commit-queue');
     xhr.onreadystatechange = function() {
         if (xhr.readyState == 4) {
             callback($(xhr.responseText));
         }
     };
     xhr.send();
-}
-
-function requestWebkitCommitQueueList(callback) {
-    requestQueuePage(function(doc) {
-        var result = [];
-        var rows = $('tr', doc);
-        rows.each(function(i, row) {
-            // only use data cells, not headers
-            var cells = $('td', row);
-            if (cells.length == 3) {
-                var hashPosition = $(cells[0]).text();
-                var position = /\d+/.exec(hashPosition);
-                result.push({position: position ? parseInt(position[0]) : hashPosition,
-                             patch: $(cells[1]).text().trim(),
-                             time: $(cells[2]).text().trim()});
-            }
-        });
-        callback(result);
-    });
 }
 
 function maybeRun(bugList, queueList, callback) {
@@ -375,26 +354,6 @@ function maybeRun(bugList, queueList, callback) {
     callback(result);
 }
 
-
-function requestWebkitCommitQueuePositions(email, callback) {
-    var queueList, bugList;
-    requestWebkitCommitQueueList(function(q) {
-        console.log("DONE with webkit commit queue: ", q);
-        queueList = q;
-        maybeRun(bugList, queueList, callback);
-    });
-
-    if (email) {
-        requestBugzillaList(email, function(b) {
-            console.log("DONE with " + email + "'s bugs", b);
-            bugList = b;
-            maybeRun(bugList, queueList, callback);
-        });
-    } else {
-        maybeRun([], queueList, callback);
-    }
-}
-
 function requestChromiumLKGR(callback) {
     var xhr = new XMLHttpRequest();
     xhr.open('GET', 'https://chromium-status.appspot.com/lkgr');
@@ -406,12 +365,12 @@ function requestChromiumLKGR(callback) {
     xhr.send();
 }
 
-function webkitTracLink(svn_id) {
-    var url = 'https://trac.webkit.org/changeset/' + svn_id;
+function blinkTracLink(svn_id) {
+    var url = 'https://trac.blink.org/changeset/' + svn_id;
     return '<a href="' + url + '" title="' + url + '" target="_new">r' + svn_id+ '</a>';
 }
 
-function requestWebkitGardeners(callback) {
+function requestBlinkGardeners(callback) {
     console.log("Getting gardeners...");
     var xhr = new XMLHttpRequest();
     xhr.open('GET', 'https://chromium-build.appspot.com/p/chromium/sheriff_webkit.js');
@@ -432,9 +391,9 @@ function requestWebkitGardeners(callback) {
                             console.log("Checking gardener: ", gardener.nick, queue);
                             for (var i = 0; i < queue.length; i++) {
                                 var roll_match =
-                                        /Roll (webkit|blink) (\d+):(\d+)/i.exec(queue[i].summary) ||
-                                        /(blink|webkit) roll (\d+):(\d+)/i.exec(queue[i].summary) ||
-                                        /(webkit|blink) roll (\d+)-&gt;(\d+)/i.exec(queue[i].summary);
+                                        /Roll (blink|blink) (\d+):(\d+)/i.exec(queue[i].summary) ||
+                                        /(blink|blink) roll (\d+):(\d+)/i.exec(queue[i].summary) ||
+                                        /(blink|blink) roll (\d+)-&gt;(\d+)/i.exec(queue[i].summary);
 ;
                                 if (roll_match) {
                                     queue[i].start = roll_match[2];

@@ -1,26 +1,25 @@
 var LOADING_STATUS = {
     haveChromiumLKGR: true,
     haveChromiumQueue: true,
-    haveWebkitCommits: true,
-    haveWebkitGardeners: true,
-    haveWebkitQueue: true,
-    haveWebkitVersion: true,
+    haveBlinkCommits: true,
+    haveBlinkGardeners: true,
+    haveBlinkQueue: true,
+    haveBlinkVersion: true,
 };
 var backgroundPage = chrome.extension.getBackgroundPage();
 
 window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL ||
-    window.webkitResolveLocalFileSystemURL;
+    window.blinkResolveLocalFileSystemURL;
 
 document.addEventListener('DOMContentLoaded', function() {
-    setWebkitVersion(backgroundPage.buildStatus.webkit_version,
-                     backgroundPage.buildStatus.chromium_webkit_version);
+    setBlinkVersion(backgroundPage.buildStatus.blink_version,
+                     backgroundPage.buildStatus.chromium_blink_version);
 
-    setWebkitQueue(backgroundPage.buildStatus.webkit_queue);
     setChromiumQueue(backgroundPage.buildStatus.chromium_queue);
 
-    setWebkitCommits(backgroundPage.buildStatus.webkit_feed);
+    setBlinkCommits(backgroundPage.buildStatus.blink_feed);
     setChromiumLKGR(backgroundPage.buildStatus.chromium_lkgr);
-    setWebkitGardeners(backgroundPage.buildStatus.webkit_gardeners);
+    setBlinkGardeners(backgroundPage.buildStatus.blink_gardeners);
 
     // hook up other event listeners
     $('#refresh-button').click(function() {
@@ -51,7 +50,7 @@ function refreshAll() {
     for (var k in LOADING_STATUS)
         LOADING_STATUS[k] = false;
     refreshProgress();
-    backgroundPage.refresh(setWebkitVersion, setWebkitCommits, setWebkitQueue, setChromiumQueue, setChromiumLKGR, setWebkitGardeners);
+    backgroundPage.refresh(setBlinkVersion, setBlinkCommits, setChromiumQueue, setChromiumLKGR, setBlinkGardeners);
 }
 
 var chart_loaded = false;
@@ -116,53 +115,15 @@ function fadeShow($elmt, text) {
     return $elmt;
 }
 
-function setWebkitVersion(webkit_version, chromium_version, initializing) {
-    console.log("setWebkitVersion got ", webkit_version, chromium_version);
-    LOADING_STATUS.haveWebkitVersion = true;
-    fadeShow($('#webkit-version'), webkit_version);
+function setBlinkVersion(blink_version, chromium_version, initializing) {
+    console.log("setBlinkVersion got ", blink_version, chromium_version);
+    LOADING_STATUS.haveBlinkVersion = true;
+    fadeShow($('#blink-version'), blink_version);
     chromium_version = chromium_version || "";
-    fadeShow($('#chromium-webkit-version'), chromium_version);
+    fadeShow($('#chromium-blink-version'), chromium_version);
     refreshProgress();
 };
 
-function setWebkitQueue(queue) {
-    LOADING_STATUS.haveWebkitQueue = true;
-    refreshProgress();
-    var parentDiv = $('#webkit-queue-title');
-    var currentQueueDiv = parentDiv.find('.current-queue');
-    currentQueueDiv.empty();
-    if (queue && queue.length)
-        parentDiv.show();
-    else {
-        parentDiv.hide();
-        return;
-    }
-
-    if (!queue)
-        return;
-
-    queue.forEach(function(entry, i) {
-        if (i != 0)
-            $('<span>, </span>').appendTo(currentQueueDiv);
-
-        var span = $('<span>').appendTo(currentQueueDiv);
-        var url = 'http://wkb.ug/' + entry.bug;
-        var text = entry.bug;
-        var title = entry.summary;
-        $('<a target="_new"></a>').text(text)
-            .attr('href', url).attr('title', title)
-            .appendTo(span);
-
-        // webkit queue position?
-        var position = '#' + entry.position;
-        if (entry.locked)
-            position += " locked: " + entry.locked;
-        $('<span>: </span>').appendTo(span);
-        $('<a target="turkeydinner-queue"></a>').text(position)
-            .attr('href', 'https://webkit-commit-queue.appspot.com/queue-status/commit-queue')
-            .appendTo(span);
-    });
-}
 
 function setChromiumQueue(queue) {
     LOADING_STATUS.haveChromiumQueue = true;
@@ -207,24 +168,24 @@ function setChromiumQueue(queue) {
 
 }
 
-function setWebkitCommits(webkit_feed) {
-    LOADING_STATUS.haveWebkitCommits = true;
-    var entries = webkit_feed.entries;
+function setBlinkCommits(blink_feed) {
+    LOADING_STATUS.haveBlinkCommits = true;
+    var entries = blink_feed.entries;
     var feedRow = $('#feed-entries');
     feedRow.empty();
 
-    var webkit_version = backgroundPage.buildStatus.webkit_version;
+    var blink_version = backgroundPage.buildStatus.blink_version;
 
-    var gardeners = backgroundPage.buildStatus.webkit_gardeners;
-    var webkit_next_roll = 0;
-    if (backgroundPage.buildStatus.webkit_gardeners) {
+    var gardeners = backgroundPage.buildStatus.blink_gardeners;
+    var blink_next_roll = 0;
+    if (backgroundPage.buildStatus.blink_gardeners) {
         for (var i = 0; i < gardeners.length ; i++) {
             var gardener = gardeners[i];
             for (var j = 0; j < gardener.queue.length; j++)
-                webkit_next_roll = Math.max(webkit_next_roll, gardener.queue[j].end);
+                blink_next_roll = Math.max(blink_next_roll, gardener.queue[j].end);
         }
     }
-    var webkit_roll_entry;
+    var blink_roll_entry;
     var pending = 0;
     var landed = 0;
     var first_landed;
@@ -238,7 +199,7 @@ function setWebkitCommits(webkit_feed) {
     entries.forEach(function(entry, i) {
         var author;
         if (entry.patch_by) {
-            if (entry.author != 'commit-queue@webkit.org') {
+            if (entry.author != 'commit-queue@blink.org') {
                 author = entry.patch_by + " (reviewed by " + entry.author + ")";
             } else {
                 author = entry.patch_by + " (commit-queue)";
@@ -250,7 +211,7 @@ function setWebkitCommits(webkit_feed) {
         var landing_status;
         var mine = false;
         entry.column = columns;
-        if (webkit_version >= entry.svn_id) {
+        if (blink_version >= entry.svn_id) {
             landing_status = "landed";
             if (currentEmail &&
                 (entry.patch_by == currentEmail) ||
@@ -273,9 +234,9 @@ function setWebkitCommits(webkit_feed) {
         }
 
         // the exact SVN id doesn't always appear
-        if (!webkit_roll_entry && webkit_next_roll >= entry.svn_id) {
-            webkit_next_roll = 0;
-            webkit_roll_entry = entry;
+        if (!blink_roll_entry && blink_next_roll >= entry.svn_id) {
+            blink_next_roll = 0;
+            blink_roll_entry = entry;
         }
 
         var listItem = $('<td>').attr('title', entry.svn_id);
@@ -288,7 +249,7 @@ function setWebkitCommits(webkit_feed) {
         var date = new Date(entry.updated);
         var details = $('<div>').addClass('entry-details').appendTo(listItem);
         $('<div class="author">').text(author).appendTo(details);
-        $('<div class="webkit-trac">').html(webkitTracLink(entry.svn_id)).appendTo(details);
+        $('<div class="blink-trac">').html(blinkTracLink(entry.svn_id)).appendTo(details);
         $('<div class="date">').text(date).appendTo(details);
         var title = $("<span>").html(linkify(entry.title));
         title.find("a").attr("target", "_new");
@@ -310,8 +271,8 @@ function setWebkitCommits(webkit_feed) {
     $('#chrome-status').empty();
 
     $('tr.rev').remove();
-    if (webkit_roll_entry) {
-        $('<tr class="rev roll"><td colspan=' + webkit_roll_entry.column + '></td><td colspan=20>&#8595;next roll:' + webkit_roll_entry.svn_id + '</td></tr>').insertAfter('#chrome-status');
+    if (blink_roll_entry) {
+        $('<tr class="rev roll"><td colspan=' + blink_roll_entry.column + '></td><td colspan=20>&#8595;next roll:' + blink_roll_entry.svn_id + '</td></tr>').insertAfter('#chrome-status');
 
     }
     // each commit gets its own rows for a nice stair-step effect
@@ -325,13 +286,13 @@ function setWebkitCommits(webkit_feed) {
                 entryRow = $('<tr class="rev"><td colspan=' + entry.column + ' style="text-align: right">' + entry.bug + '</td><td>&#8628;</td></tr>');
             }
             entryRow.insertAfter('#chrome-status');
-            $('<a target="turkeydinner-webkit-svn">').attr('href', 'https://trac.webkit.org/changeset/' + entry.svn_id)
+            $('<a target="turkeydinner-blink-svn">').attr('href', 'https://trac.blink.org/changeset/' + entry.svn_id)
                 .addClass('landed entry')
                     .text(entry.bug).appendTo(currentLandedDiv);
         });
-        $('#webkit-landed-title').show();
+        $('#blink-landed-title').show();
     } else {
-        $('#webkit-landed-title').hide();
+        $('#blink-landed-title').hide();
     }
 
     // Insert last roll
@@ -354,14 +315,14 @@ function setWebkitCommits(webkit_feed) {
             if (i != 0) {
                 $('<span>, </span>').appendTo(currentPendingDiv);
             }
-            $('<a target="turkeydinner-webkit-svn">').attr('href', 'https://trac.webkit.org/changeset/' + entry.svn_id)
+            $('<a target="turkeydinner-blink-svn">').attr('href', 'https://trac.blink.org/changeset/' + entry.svn_id)
                 .addClass('pending entry')
                 .attr('title', entry.title)
                 .text(entry.bug).appendTo(currentPendingDiv);
         });
-        $('#webkit-pending-title').show();
+        $('#blink-pending-title').show();
     } else {
-        $('#webkit-pending-title').hide();
+        $('#blink-pending-title').hide();
     }
 
     refreshProgress();
@@ -373,8 +334,8 @@ function setChromiumLKGR(lkgr, initializing) {
     fadeShow($('#chromium-lkgr'), lkgr);
 }
 
-function setWebkitGardeners(gardeners) {
-    LOADING_STATUS.haveWebkitGardeners = true;
+function setBlinkGardeners(gardeners) {
+    LOADING_STATUS.haveBlinkGardeners = true;
     // console.log("gardeners = ", gardeners);
     if (!gardeners)
         return;
@@ -402,6 +363,6 @@ function setWebkitGardeners(gardeners) {
             .parent().append(gardener_note)
             .appendTo(gardenerSpan);
         });
-    fadeShow($('#webkit-gardeners'), gardenerSpan);
+    fadeShow($('#blink-gardeners'), gardenerSpan);
     refreshProgress();
 }
