@@ -91,6 +91,22 @@ function requestFeed(url, callback) {
 
 }
 
+var status_order = ['mine', 'closed'];
+function sortByStatus(e1, e2) {
+    var p1 = status_order.indexOf(e1.status);
+    var p2 = status_order.indexOf(e2.status);
+    console.log(e1, "<=>", e2, " => ", p1 - p2);
+    return p1 - p2;
+}
+
+function sortChromiumQueue(e1, e2) {
+    var result = sortByStatus(e1, e2);
+    if (result != 0)
+        return result;
+    console.log("    by timestamp: ", e2.timestamp.localeCompare(e1.timestamp));
+    return e2.timestamp.localeCompare(e1.timestamp);
+}
+
 function requestAllChromiumQueues(nick, callback) {
     // super cheesy, not parallel right now
     requestChromiumQueue(nick, 'mine', function(mine) {
@@ -98,8 +114,8 @@ function requestAllChromiumQueues(nick, callback) {
         requestChromiumQueue(nick, 'closed', function(closed) {
             closed.forEach(function(entry) { entry.status = 'closed'; });
             var full_list = mine.concat(closed);
+            full_list.sort(sortChromiumQueue);
             console.log("DONE with " + nick + "'s chromium queue: ", full_list);
-            full_list.sort(function(a, b) { return b.timestamp.localeCompare(a.timestamp); });
             callback(full_list);
         });
     });
