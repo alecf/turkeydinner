@@ -62,7 +62,7 @@ function refresh(version_callback, blink_commit_callback, chromium_callback, chr
     });
 
     if (review_nick) {
-        requestAllChromiumQueues(review_nick, function(reviews) {
+        requestAllChromiumQueues(review_nick).then(function(reviews) {
             buildStatus.chromium_queue = reviews;
             if (chromium_callback)
                 chromium_callback(reviews);

@@ -107,25 +107,28 @@ function sortChromiumQueue(e1, e2) {
     return e2.timestamp.localeCompare(e1.timestamp);
 }
 
-function requestAllChromiumQueues(nick, callback) {
+function requestAllChromiumQueues(nick) {
     // super cheesy, not parallel right now
-    requestChromiumQueue(nick, 'mine', function(mine) {
+    var deferred = Q.defer();
+    requestChromiumQueue(nick, 'mine').then(function(mine) {
         mine.forEach(function(entry) { entry.status = 'mine'; });
-        requestChromiumQueue(nick, 'closed', function(closed) {
+        requestChromiumQueue(nick, 'closed').then(function(closed) {
             closed.forEach(function(entry) { entry.status = 'closed'; });
             var full_list = mine.concat(closed);
             full_list.sort(sortChromiumQueue);
             console.log("DONE with " + nick + "'s chromium queue: ", full_list);
-            callback(full_list);
+            deferred.resolve(full_list);
         });
     });
+    return deferred.promise;
 }
 
 function requestChromiumIssue(id) {
     return requestFeed('https://codereview.chromium.org/rss/issue/' + id);
 }
 
-function requestChromiumQueue(nick, type, callback) {
+function requestChromiumQueue(nick, type) {
+    var deferred = Q.defer();
     requestFeed('https://codereview.chromium.org/rss/' + type + '/' + nick).then(function(doc) {
         var result = [];
         var pending = 0;
@@ -178,16 +181,17 @@ function requestChromiumQueue(nick, type, callback) {
                     });
                     // not sure if this will work...
                     if (--pending == 0) {
-                        callback(result);
+                        deferred.resolve(result);
                     }
                 });
             }
         });
         if (!pending) {
-            callback([]);
+            deferred.resolve([]);
         }
 
     });
+    return deferred.promise;
 }
 
 function convertChromiumFeed(doc, callback) {
@@ -385,7 +389,7 @@ function requestBlinkGardeners(callback) {
                         var gardener = {nick: s.trim() };
                         result.push(gardener);
                         pending++;
-                        requestChromiumQueue(gardener.nick, 'mine', function(queue) {
+                        requestChromiumQueue(gardener.nick, 'mine').then(function(queue) {
                             gardener.queue = [];
                             console.log("Checking gardener: ", gardener.nick, queue);
                             for (var i = 0; i < queue.length; i++) {
