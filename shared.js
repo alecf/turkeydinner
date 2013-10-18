@@ -129,68 +129,62 @@ function requestChromiumIssue(id) {
 
 function requestChromiumQueue(nick, type) {
     var deferred = Q.defer();
-    requestFeed('https://codereview.chromium.org/rss/' + type + '/' + nick).then(function(doc) {
-        var result = [];
-        var pending = 0;
-        $('entry', doc).each(function (i, entry) {
-            var url = $('link', entry).attr('href');
-            var match = /\/(\d+)\//.exec(url);
-            if (match) {
-                var summary = $('summary', entry).text();
-                var id = match[1];
-                var info = { id: id, summary: summary.trim().split('\n')[0], type: type };
-                var bugmatch = /BUG=(\d+)/.exec(summary);
-                if (bugmatch)
-                    info.bug = bugmatch[1];
-                result.push(info);
-                pending++;
-                requestChromiumIssue(id).then(function(doc) {
-                    var lastCQindex = -1;
-                    var lastCommit;
-                    //console.log("Found chromium review issue: ", id);
-                    $('entry', doc).each(function(i, entry) {
-                        // keep latest timestamp
-                        info.timestamp = $('updated', entry).text();
-                        var summary = $('summary', entry).text();
-                        var matchcq = /https:\/\/chromium-status.appspot.com\/cq\/[@\w.]+\/\d+\/\d+/.exec(summary);
-                        if (matchcq) {
-                            // keep the last one!
-                            info.cqUrl = matchcq[0];
-                            lastCQindex = i;
-                            delete info.commit;
-                            delete info.aborted;
-                        }
+    requestFeed('https://codereview.chromium.org/rss/' + type + '/' + nick)
+        .then(function(doc) {
+            var resultPromises = [];
+            $('entry', doc).each(function (i, entry) {
+                var url = $('link', entry).attr('href');
+                var match = /\/(\d+)\//.exec(url);
+                if (match) {
+                    var summary = $('summary', entry).text();
+                    var id = match[1];
+                    var info = { id: id, summary: summary.trim().split('\n')[0], type: type };
+                    var bugmatch = /BUG=(\d+)/.exec(summary);
+                    if (bugmatch)
+                        info.bug = bugmatch[1];
+                    var p = requestChromiumIssue(id)
+                            .then(function(doc) {
+                                var lastCQindex = -1;
+                                var lastCommit;
+                                //console.log("Found chromium review issue: ", id);
+                                $('entry', doc).each(function(i, entry) {
+                                    // keep latest timestamp
+                                    info.timestamp = $('updated', entry).text();
+                                    var summary = $('summary', entry).text();
+                                    var matchcq = /https:\/\/chromium-status.appspot.com\/cq\/[@\w.]+\/\d+\/\d+/.exec(summary);
+                                    if (matchcq) {
+                                        // keep the last one!
+                                        info.cqUrl = matchcq[0];
+                                        lastCQindex = i;
+                                        delete info.commit;
+                                        delete info.aborted;
+                                    }
 
-                        var committed = /Change committed as (\d+)/.exec(summary);
-                        if (committed) {
-                            info.commit = committed[1];
-                            delete info.aborted;
-                            delete info.cqUrl;
-                        }
-                        var aborted = /Presubmit ERRORS(.*)/m.exec(summary) ||
-                                /Commit queue rejected this change/m.exec(summary) ||
-                                /Presubmit check.*failed/m.exec(summary) ||
-                                /Failed to apply patch/m.exec(summary) ||
-                                /Sorry for I got bad news for ya/m.exec(summary);
-                        if (aborted) {
-                            // booh - regexps only go to the end of the current line
-                            info.aborted = summary.slice(aborted.index);
-                            delete info.commit;
-                            delete info.cqUrl;
-                        }
-                    });
-                    // not sure if this will work...
-                    if (--pending == 0) {
-                        deferred.resolve(result);
-                    }
-                });
-            }
+                                    var committed = /Change committed as (\d+)/.exec(summary);
+                                    if (committed) {
+                                        info.commit = committed[1];
+                                        delete info.aborted;
+                                        delete info.cqUrl;
+                                    }
+                                    var aborted = /Presubmit ERRORS(.*)/m.exec(summary) ||
+                                            /Commit queue rejected this change/m.exec(summary) ||
+                                            /Presubmit check.*failed/m.exec(summary) ||
+                                            /Failed to apply patch/m.exec(summary) ||
+                                            /Sorry for I got bad news for ya/m.exec(summary);
+                                    if (aborted) {
+                                        // booh - regexps only go to the end of the current line
+                                        info.aborted = summary.slice(aborted.index);
+                                        delete info.commit;
+                                        delete info.cqUrl;
+                                    }
+                                });
+                                return info;
+                            });
+                    resultPromises.push(p);
+                }
+            });
+            deferred.resolve(Q.all(resultPromises));
         });
-        if (!pending) {
-            deferred.resolve([]);
-        }
-
-    });
     return deferred.promise;
 }
 
@@ -288,11 +282,9 @@ function requestBlinkGardeners() {
             var match =/document.write\(['"](.*)['"]\)+/.exec(js);
             var resultPromises = [];
             if (match) {
-                var result = [];
                 match[1].split(',').forEach(
                     function(s) {
                         var gardener = {nick: s.trim() };
-                        result.push(gardener);
                         var p = requestChromiumQueue(gardener.nick, 'mine')
                                 .then(function(queue) {
                                     gardener.queue = [];
