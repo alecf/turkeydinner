@@ -1,7 +1,6 @@
 function requestBlinkVersion() {
     if (chrome.browserAction)
         chrome.browserAction.setBadgeText({"text": "..."});
-    var deferred = Q.defer();
     // first request the latest version out of the git repository
     return promiseXHR('https://git.chromium.org/gitweb/?p=chromium/src.git;a=blob_plain;f=DEPS;hb=refs/heads/master')
         .then(function(feed) {
