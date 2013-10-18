@@ -41,7 +41,9 @@ function refresh(version_callback, blink_commit_callback, chromium_callback, chr
     buildStatus.last_refresh = new Date();
 
     console.log("kicking off refresh...");
-    requestBlinkVersion(function(blink_version, chromium_version) {
+    requestBlinkVersion().then(function(versions) {
+        var blink_version = versions[0];
+        var chromium_version = versions[1];
         if (chrome.browserAction) {
             chrome.browserAction.setBadgeText({text: blink_version});
             chrome.browserAction.setTitle({title: "Blink revision: " + blink_version});

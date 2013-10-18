@@ -1,8 +1,8 @@
-function requestBlinkVersion(callback) {
-  // first request the latest version out of the git repository
-  var xhr = new XMLHttpRequest();
+function requestBlinkVersion() {
+    var deferred = Q.defer();
+    // first request the latest version out of the git repository
+    var xhr = new XMLHttpRequest();
     xhr.open('GET', 'https://git.chromium.org/gitweb/?p=chromium/src.git;a=blob_plain;f=DEPS;hb=refs/heads/master');
-    console.log("Trying to set badge text on ", chrome, ".", chrome.browserAction);
     if (chrome.browserAction)
         chrome.browserAction.setBadgeText({"text": "..."});
     xhr.onreadystatechange = function() {
@@ -14,17 +14,21 @@ function requestBlinkVersion(callback) {
                 var revision = line.indexOf('"webkit_revision":');
                 if (revision != -1) {
                     var val = line.split(":")[1].split('"')[1];
-                    requestChromiumVersionForBlinkRoll(val, callback);
+                    requestChromiumVersionForBlinkRoll(val).then(function(chromium_version) {
+                        deferred.resolve([val, chromium_version]);
+                    });
                     break;
                 }
             }
         }
     };
     xhr.send();
+    return deferred.promise;
 }
 
 
-function requestChromiumVersionForBlinkRoll(blinkVersion, callback) {
+function requestChromiumVersionForBlinkRoll(blinkVersion) {
+    var deferred = Q.defer();
     requestFeed('https://git.chromium.org/gitweb/?p=chromium/src.git;a=atom;f=DEPS;h=refs/heads/master',
                 function(feed) {
                     var found = false;
@@ -55,8 +59,7 @@ function requestChromiumVersionForBlinkRoll(blinkVersion, callback) {
                             var svn_match = /git-svn-id:\s+svn:\/\/svn.chromium.org\/chrome\/trunk\/src@(\d+)/m.exec(comments);
                             if (to == blinkVersion) {
                                 found = true;
-                                if (callback)
-                                    callback(blinkVersion, svn_match ? svn_match[1] : "???");
+                                deferred.resolve(svn_match ? svn_match[1] : "???");
                                 return false;
                             }
                         } else
@@ -68,9 +71,10 @@ function requestChromiumVersionForBlinkRoll(blinkVersion, callback) {
                         //     //requestChromiumIssue(id, function(result)
                         // }
                     });
-                    if (!found && callback)
-                        callback(blinkVersion);
+                    if (!found)
+                        deferred.resolve(null);
                 });
+    return deferred.promise;
 }
 
 
