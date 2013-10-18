@@ -194,10 +194,6 @@ function requestChromiumQueue(nick, type) {
     return deferred.promise;
 }
 
-function convertChromiumFeed(doc, callback) {
-
-}
-
 function requestChromiumCommits() {
     return requestFeed('https://git.chromium.org/gitweb/?p=chromium.git;a=atom;h=refs/heads/trunk').then(function(doc) {
         return convertChromiumFeed(doc, callback);
@@ -253,108 +249,6 @@ function convertBlinkFeed(doc) {
 function requestBlinkCommits() {
     return requestFeed('https://git.chromium.org/gitweb/?p=external/WebKit_trimmed.git;a=atom;h=refs/heads/master')
         .then(convertBlinkFeed);
-}
-
-function requestBugzillaFeed(email, callback) {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'https://bugs.blink.org/buglist.cgi?bug_status=UNCONFIRMED&bug_status=NEW&bug_status=ASSIGNED&bug_status=REOPENED&emailassigned_to1=1&emailtype1=substring&email1=' + email + '&ctype=atom');
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState == 4) {
-            console.log("Have bugzilla feed.");
-            callback(xhr.responseXML);
-        }
-    };
-    xhr.send();
-}
-
-function requestBugzillaAttachment(url, callback) {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', url + '&ctype=xml');
-    console.log("Fetching attachment ", url);
-    xhr.onreadystatechange = function() {
-        var result = [];
-        if (xhr.readyState == 4) {
-            var doc = $(xhr.responseXML);
-            $('attachment[isobsolete=0]', doc).each(function(i, attachment) {
-                var flags = {};
-                $('flag', attachment).each(function (i, flag) {
-                    flags[$(flag).attr('name')] = $(flag).attr('status');
-                });
-                result.push({ id: $('attachid', attachment).text().trim(),
-                              flags: flags});
-            });
-            callback(result);
-        }
-    };
-    xhr.send();
-
-}
-
-
-function requestBugzillaList(email, callback) {
-    requestBugzillaFeed(email, function(doc) {
-        var result = [];
-        var pending = 0;
-        $('entry', doc).each(function (i, entry) {
-            var url = $('id', entry).text().trim();
-            var match = /id=(\d+)/.exec(url);
-            var title = $('title', entry).text().trim();
-            if (match) {
-                var buginfo = {id: match[1], title: title, data: entry};
-                result.push(buginfo);
-                pending++;
-                requestBugzillaAttachment(url, function(attachments) {
-                    buginfo.attachments = attachments;
-                    if (--pending == 0) {
-                        callback(result);
-                    }
-                });
-            }
-        });
-        // if there aren't any entries, pending will never have
-        // incremented
-        if (!pending) {
-            callback([]);
-        }
-    });
-}
-
-function requestQueuePage(callback) {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'https://blink-commit-queue.appspot.com/queue-status/commit-queue');
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState == 4) {
-            callback($(xhr.responseText));
-        }
-    };
-    xhr.send();
-}
-
-function maybeRun(bugList, queueList, callback) {
-    if (!bugList || !queueList)
-        return;
-    var result = [];
-    bugList.forEach(function(bug) {
-        bug.attachments.forEach(function (patch) {
-            queueList.forEach(function (entry) {
-                if (patch.id == entry.patch) {
-                    var minutes;
-                    var time;
-                    if (entry.time && (minutes = /(\d+) minutes ago/.exec(entry.time))) {
-                        console.log("Making date out of ", minutes);
-                        time = new Date(Date.now() - parseInt(minutes[1]) * 60 * 1000).toLocaleTimeString();
-                    }
-                    result.push({ position: entry.position,
-                                  locked: time,
-                                  bug: bug.id,
-                                  summary: bug.title,
-                                  patch: patch.id });
-                }
-            });
-        });
-    });
-    result.sort(function(a,b) { return a.position - b.position; });
-    callback(result);
 }
 
 function requestChromiumLKGR(callback) {
