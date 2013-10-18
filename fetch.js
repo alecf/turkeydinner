@@ -71,13 +71,13 @@ function refresh(version_callback, blink_commit_callback, chromium_callback, chr
         chromium_callback([]);
     }
 
-    requestChromiumLKGR(function(lkgr) {
+    requestChromiumLKGR().then(function(lkgr) {
         buildStatus.chromium_lkgr = lkgr;
         if (chromium_lkgr_callback)
             chromium_lkgr_callback(lkgr);
     });
 
-    requestBlinkGardeners(function(gardeners) {
+    requestBlinkGardeners().then(function(gardeners) {
         buildStatus.blink_gardeners = gardeners;
         if (blink_gardener_callback)
             blink_gardener_callback(gardeners);

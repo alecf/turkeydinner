@@ -251,15 +251,17 @@ function requestBlinkCommits() {
         .then(convertBlinkFeed);
 }
 
-function requestChromiumLKGR(callback) {
+function requestChromiumLKGR() {
+    var deferred = Q.defer();
     var xhr = new XMLHttpRequest();
     xhr.open('GET', 'https://chromium-status.appspot.com/lkgr');
     xhr.onreadystatechange = function() {
         if (xhr.readyState == 4) {
-            callback(xhr.responseText);
+            deferred.resolve(xhr.responseText);
         }
     };
     xhr.send();
+    return deferred.promise;
 }
 
 function blinkTracLink(svn_id) {
@@ -267,7 +269,8 @@ function blinkTracLink(svn_id) {
     return '<a href="' + url + '" title="' + url + '" target="_new">r' + svn_id+ '</a>';
 }
 
-function requestBlinkGardeners(callback) {
+function requestBlinkGardeners() {
+    var deferred = Q.defer();
     console.log("Getting gardeners...");
     var xhr = new XMLHttpRequest();
     xhr.open('GET', 'https://chromium-build.appspot.com/p/chromium/sheriff_webkit.js');
@@ -301,13 +304,14 @@ function requestBlinkGardeners(callback) {
                             console.log(gardener.nick + "'s queue: ", gardener.queue);
 
                             if (--pending == 0)
-                                callback(result);
+                                deferred.resolve(result);
                         });
                     });
             }
             if (!pending)
-                callback([]);
+                deferred.resolve([]);
         }
     };
     xhr.send();
+    return deferred.promise;
 }
