@@ -264,9 +264,17 @@ function requestChromiumLKGR() {
     return deferred.promise;
 }
 
-function blinkTracLink(svn_id) {
-    var url = 'https://trac.blink.org/changeset/' + svn_id;
-    return '<a href="' + url + '" title="' + url + '" target="_new">r' + svn_id+ '</a>';
+function promiseXHR(url) {
+    var deferred = Q.defer();
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url);
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState == 4) {
+            deferred.resolve(xhr.responseText);
+        }
+    };
+    xhr.send();
+    return deferred.promise;
 }
 
 function requestBlinkGardeners() {
@@ -278,38 +286,35 @@ function requestBlinkGardeners() {
         if (xhr.readyState == 4) {
             var js = xhr.responseText;
             var match =/document.write\(['"](.*)['"]\)+/.exec(js);
-            var pending = 0;
+            var resultPromises = [];
             if (match) {
                 var result = [];
                 match[1].split(',').forEach(
                     function(s) {
                         var gardener = {nick: s.trim() };
                         result.push(gardener);
-                        pending++;
-                        requestChromiumQueue(gardener.nick, 'mine').then(function(queue) {
-                            gardener.queue = [];
-                            console.log("Checking gardener: ", gardener.nick, queue);
-                            for (var i = 0; i < queue.length; i++) {
-                                var roll_match =
-                                        /Roll (blink|blink) (\d+):(\d+)/i.exec(queue[i].summary) ||
-                                        /(blink|blink) roll (\d+):(\d+)/i.exec(queue[i].summary) ||
-                                        /(blink|blink) roll (\d+)-&gt;(\d+)/i.exec(queue[i].summary);
-;
-                                if (roll_match) {
-                                    queue[i].start = roll_match[2];
-                                    queue[i].end = roll_match[3];
-                                    gardener.queue.push(queue[i]);
-                                }
-                            }
-                            console.log(gardener.nick + "'s queue: ", gardener.queue);
-
-                            if (--pending == 0)
-                                deferred.resolve(result);
-                        });
+                        var p = requestChromiumQueue(gardener.nick, 'mine')
+                                .then(function(queue) {
+                                    gardener.queue = [];
+                                    console.log("Checking gardener: ", gardener.nick, queue);
+                                    for (var i = 0; i < queue.length; i++) {
+                                        var roll_match =
+                                                /Roll (blink|blink) (\d+):(\d+)/i.exec(queue[i].summary) ||
+                                                /(blink|blink) roll (\d+):(\d+)/i.exec(queue[i].summary) ||
+                                                /(blink|blink) roll (\d+)-&gt;(\d+)/i.exec(queue[i].summary);
+                                        if (roll_match) {
+                                            queue[i].start = roll_match[2];
+                                            queue[i].end = roll_match[3];
+                                            gardener.queue.push(queue[i]);
+                                        }
+                                    }
+                                    console.log(gardener.nick + "'s queue: ", gardener.queue);
+                                    return gardener;
+                                });
+                        resultPromises.push(p);
                     });
             }
-            if (!pending)
-                deferred.resolve([]);
+            deferred.resolve(Q.all(resultPromises));
         }
     };
     xhr.send();
