@@ -54,8 +54,8 @@ function refresh(version_callback, blink_commit_callback, chromium_callback, chr
             version_callback(blink_version, chromium_version);
         }
     });
-    requestBlinkCommits(function(feeddata) {
-        console.log("requestBlinkCommits");
+    requestBlinkCommits().then(function(feeddata) {
+        console.log("requestBlinkCommits", feeddata);
         buildStatus.blink_feed = feeddata;
         if (blink_commit_callback)
             blink_commit_callback(feeddata);

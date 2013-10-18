@@ -29,7 +29,7 @@ function requestBlinkVersion() {
 
 function requestChromiumVersionForBlinkRoll(blinkVersion) {
     var deferred = Q.defer();
-    requestFeed('https://git.chromium.org/gitweb/?p=chromium/src.git;a=atom;f=DEPS;h=refs/heads/master',
+    requestFeed('https://git.chromium.org/gitweb/?p=chromium/src.git;a=atom;f=DEPS;h=refs/heads/master').then(
                 function(feed) {
                     var found = false;
                     $('entry', feed).each(function(i, entry) {
@@ -78,21 +78,19 @@ function requestChromiumVersionForBlinkRoll(blinkVersion) {
 }
 
 
-function requestFeed(url, callback) {
+function requestFeed(url) {
+    var deferred = Q.defer();
   var xhr = new XMLHttpRequest();
   xhr.open('GET', url);
 
   xhr.onreadystatechange = function() {
     if (xhr.readyState == 4) {
       // look in the xml, bleah
-
-        if (callback) {
-            callback(xhr.responseXML);
-        }
+        deferred.resolve(xhr.responseXML);
     }
   };
   xhr.send();
-
+    return deferred.promise;
 }
 
 var status_order = ['mine', 'closed'];
@@ -123,12 +121,12 @@ function requestAllChromiumQueues(nick, callback) {
     });
 }
 
-function requestChromiumIssue(id, callback) {
-    requestFeed('https://codereview.chromium.org/rss/issue/' + id, callback);
+function requestChromiumIssue(id) {
+    return requestFeed('https://codereview.chromium.org/rss/issue/' + id);
 }
 
 function requestChromiumQueue(nick, type, callback) {
-    requestFeed('https://codereview.chromium.org/rss/' + type + '/' + nick, function(doc) {
+    requestFeed('https://codereview.chromium.org/rss/' + type + '/' + nick).then(function(doc) {
         var result = [];
         var pending = 0;
         $('entry', doc).each(function (i, entry) {
@@ -143,7 +141,7 @@ function requestChromiumQueue(nick, type, callback) {
                     info.bug = bugmatch[1];
                 result.push(info);
                 pending++;
-                requestChromiumIssue(id, function(doc) {
+                requestChromiumIssue(id).then(function(doc) {
                     var lastCQindex = -1;
                     var lastCommit;
                     //console.log("Found chromium review issue: ", id);
@@ -196,8 +194,8 @@ function convertChromiumFeed(doc, callback) {
 
 }
 
-function requestChromiumCommits(callback) {
-    return requestFeed('https://git.chromium.org/gitweb/?p=chromium.git;a=atom;h=refs/heads/trunk', function(doc) {
+function requestChromiumCommits() {
+    return requestFeed('https://git.chromium.org/gitweb/?p=chromium.git;a=atom;h=refs/heads/trunk').then(function(doc) {
         return convertChromiumFeed(doc, callback);
     });
 }
@@ -205,7 +203,7 @@ function requestChromiumCommits(callback) {
 /**
  * Convert blink commit feed into something useful (read: non-xml) anotated with links/etc
  */
-function convertBlinkFeed(doc, callback) {
+function convertBlinkFeed(doc) {
     var feed = { entries: [], rawdoc: doc };
     var entries = [];
     $('entry', doc).each(function(i) {
@@ -245,15 +243,12 @@ function convertBlinkFeed(doc, callback) {
       entries.push(entry);
     });
     feed.entries = entries;
-    if (callback) {
-      callback(feed);
-    }
+    return feed;
 }
 
-function requestBlinkCommits(callback) {
-    return requestFeed('https://git.chromium.org/gitweb/?p=external/WebKit_trimmed.git;a=atom;h=refs/heads/master', function(doc) {
-        return convertBlinkFeed(doc, callback);
-    });
+function requestBlinkCommits() {
+    return requestFeed('https://git.chromium.org/gitweb/?p=external/WebKit_trimmed.git;a=atom;h=refs/heads/master')
+        .then(convertBlinkFeed);
 }
 
 function requestBugzillaFeed(email, callback) {
