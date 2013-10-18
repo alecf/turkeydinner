@@ -26,12 +26,6 @@ document.addEventListener('DOMContentLoaded', function() {
         refreshAll();
     });
 
-    var nameInput = $('#changelog-name');
-    nameInput.val(localStorage.getItem("email"));
-    nameInput.bind('change', function(e) {
-        localStorage.setItem("email", $(this).val().trim());
-    });
-
     var nickInput = $('#review-nick');
     nickInput.val(localStorage.getItem("review-nick"));
     nickInput.bind('change', function(e) {
