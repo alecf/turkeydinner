@@ -1,29 +1,24 @@
 function requestBlinkVersion() {
-    var deferred = Q.defer();
-    // first request the latest version out of the git repository
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'https://git.chromium.org/gitweb/?p=chromium/src.git;a=blob_plain;f=DEPS;hb=refs/heads/master');
     if (chrome.browserAction)
         chrome.browserAction.setBadgeText({"text": "..."});
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState == 4) {
+    var deferred = Q.defer();
+    // first request the latest version out of the git repository
+    return promiseXHR('https://git.chromium.org/gitweb/?p=chromium/src.git;a=blob_plain;f=DEPS;hb=refs/heads/master')
+        .then(function(feed) {
             var new_lines = [];
-            var lines = xhr.responseText.split('\n');
+            var lines = feed.split('\n');
             for (var i = 0; i < lines.length; i++) {
                 var line = lines[i];
                 var revision = line.indexOf('"webkit_revision":');
                 if (revision != -1) {
                     var val = line.split(":")[1].split('"')[1];
-                    requestChromiumVersionForBlinkRoll(val).then(function(chromium_version) {
-                        deferred.resolve([val, chromium_version]);
+                    return requestChromiumVersionForBlinkRoll(val).then(function(chromium_version) {
+                        return [val, chromium_version];
                     });
-                    break;
                 }
             }
-        }
-    };
-    xhr.send();
-    return deferred.promise;
+            return ["??", "??"];
+        });
 }
 
 
@@ -243,16 +238,7 @@ function requestBlinkCommits() {
 }
 
 function requestChromiumLKGR() {
-    var deferred = Q.defer();
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'https://chromium-status.appspot.com/lkgr');
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState == 4) {
-            deferred.resolve(xhr.responseText);
-        }
-    };
-    xhr.send();
-    return deferred.promise;
+    return promiseXHR('https://chromium-status.appspot.com/lkgr');
 }
 
 function promiseXHR(url) {
@@ -269,7 +255,6 @@ function promiseXHR(url) {
 }
 
 function requestBlinkGardeners() {
-    var deferred = Q.defer();
     console.log("Getting gardeners...");
     return promiseXHR('https://chromium-build.appspot.com/p/chromium/sheriff_webkit.js')
         .then(function(js) {
