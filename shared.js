@@ -28,7 +28,6 @@ function requestBlinkVersion() {
 
 
 function requestChromiumVersionForBlinkRoll(blinkVersion) {
-    var deferred = Q.defer();
     return requestFeed('https://git.chromium.org/gitweb/?p=chromium/src.git;a=atom;f=DEPS;h=refs/heads/master')
         .then(function(feed) {
             var found = null;
@@ -78,14 +77,14 @@ function requestChromiumVersionForBlinkRoll(blinkVersion) {
 
 function requestFeed(url) {
     var deferred = Q.defer();
-  var xhr = new XMLHttpRequest();
-  xhr.open('GET', url);
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url);
 
   xhr.onreadystatechange = function() {
-    if (xhr.readyState == 4) {
-      // look in the xml, bleah
-        deferred.resolve(xhr.responseXML);
-    }
+      if (xhr.readyState == 4) {
+          // look in the xml, bleah
+          deferred.resolve(xhr.responseXML);
+      }
   };
   xhr.send();
     return deferred.promise;
@@ -106,19 +105,21 @@ function sortChromiumQueue(e1, e2) {
 }
 
 function requestAllChromiumQueues(nick) {
-    // super cheesy, not parallel right now
-    var deferred = Q.defer();
-    requestChromiumQueue(nick, 'mine').then(function(mine) {
-        mine.forEach(function(entry) { entry.status = 'mine'; });
+    return Q.all([
+        requestChromiumQueue(nick, 'mine').then(function(mine) {
+            mine.forEach(function(entry) { entry.status = 'mine'; });
+            return mine;
+        }),
         requestChromiumQueue(nick, 'closed').then(function(closed) {
             closed.forEach(function(entry) { entry.status = 'closed'; });
-            var full_list = mine.concat(closed);
-            full_list.sort(sortChromiumQueue);
-            console.log("DONE with " + nick + "'s chromium queue: ", full_list);
-            deferred.resolve(full_list);
-        });
+            return closed;
+        })
+    ]).then(function(entries) {
+        var full_list = entries[0].concat(entries[1]);
+        console.log("DONE with " + nick + "'s chromium queue: ", full_list);
+        full_list.sort(sortChromiumQueue);
+        return full_list;
     });
-    return deferred.promise;
 }
 
 function requestChromiumIssue(id) {
