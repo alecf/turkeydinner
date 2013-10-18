@@ -29,52 +29,50 @@ function requestBlinkVersion() {
 
 function requestChromiumVersionForBlinkRoll(blinkVersion) {
     var deferred = Q.defer();
-    requestFeed('https://git.chromium.org/gitweb/?p=chromium/src.git;a=atom;f=DEPS;h=refs/heads/master').then(
-                function(feed) {
-                    var found = false;
-                    $('entry', feed).each(function(i, entry) {
-                        var comments = $('content', entry).text();
+    return requestFeed('https://git.chromium.org/gitweb/?p=chromium/src.git;a=atom;f=DEPS;h=refs/heads/master')
+        .then(function(feed) {
+            var found = null;
+            $('entry', feed).each(function(i, entry) {
+                var comments = $('content', entry).text();
 
-                        // at least has to mention blink
-                        if (!/blink/i.exec(comments))
-                            return true;
+                // at least has to mention blink
+                if (!/blink/i.exec(comments))
+                    return true;
 
-                        // // find the diff URL
-                        // var diff_url = $('content', entry).find('a[title="diff"]').attr('href');
-                        // if (diff_url) {
-                        //     diff_url = diff_url.replace('blobdiff', 'blobdiff_raw');
+                // // find the diff URL
+                // var diff_url = $('content', entry).find('a[title="diff"]').attr('href');
+                // if (diff_url) {
+                //     diff_url = diff_url.replace('blobdiff', 'blobdiff_raw');
 
-                        //     $.get(diff_url)
-                        //         .success(function(data) {
-                        //             var match = /\+.*blink_revision[^\d]+(\d+)/.exec(data);
-                        //             if (match) {...}
-                        //         });
+                //     $.get(diff_url)
+                //         .success(function(data) {
+                //             var match = /\+.*blink_revision[^\d]+(\d+)/.exec(data);
+                //             if (match) {...}
+                //         });
 
-                        // this is cheezy - we could possibly request the rss feed for the issue, then
-                        // look at the latest diff in the issue?
-                        var match = /(\d+):(\d+)/m.exec(comments);
-                        if (match) {
-                            var from = match[1];
-                            var to = match[2];
-                            var svn_match = /git-svn-id:\s+svn:\/\/svn.chromium.org\/chrome\/trunk\/src@(\d+)/m.exec(comments);
-                            if (to == blinkVersion) {
-                                found = true;
-                                deferred.resolve(svn_match ? svn_match[1] : "???");
-                                return false;
-                            }
-                        } else
-                        console.log("No revision in ", comments);
-                        // var match = /Review URL:\s+https:\/\/chromiumcodereview.appspot.com\/(\d+)/m.exec(comments);
-                        // if (match) {
-                        //     var id = match[1];
-                        //     console.log("DEPS log entry[" + i + "] => Chromium issue ", id);
-                        //     //requestChromiumIssue(id, function(result)
-                        // }
-                    });
-                    if (!found)
-                        deferred.resolve(null);
-                });
-    return deferred.promise;
+                // this is cheezy - we could possibly request the rss feed for the issue, then
+                // look at the latest diff in the issue?
+                var match = /(\d+):(\d+)/m.exec(comments);
+                if (match) {
+                    var from = match[1];
+                    var to = match[2];
+                    var svn_match = /git-svn-id:\s+svn:\/\/svn.chromium.org\/chrome\/trunk\/src@(\d+)/m.exec(comments);
+                    if (to == blinkVersion) {
+                        found = svn_match ? svn_match[1] : "???";
+                        return false;
+                    }
+                } else {
+                    console.log("No revision in ", comments);
+                }
+                // var match = /Review URL:\s+https:\/\/chromiumcodereview.appspot.com\/(\d+)/m.exec(comments);
+                // if (match) {
+                //     var id = match[1];
+                //     console.log("DEPS log entry[" + i + "] => Chromium issue ", id);
+                //     //requestChromiumIssue(id, function(result)
+                // }
+            });
+            return found;
+        });
 }
 
 
@@ -128,8 +126,7 @@ function requestChromiumIssue(id) {
 }
 
 function requestChromiumQueue(nick, type) {
-    var deferred = Q.defer();
-    requestFeed('https://codereview.chromium.org/rss/' + type + '/' + nick)
+    return requestFeed('https://codereview.chromium.org/rss/' + type + '/' + nick)
         .then(function(doc) {
             var resultPromises = [];
             $('entry', doc).each(function (i, entry) {
@@ -183,14 +180,13 @@ function requestChromiumQueue(nick, type) {
                     resultPromises.push(p);
                 }
             });
-            deferred.resolve(Q.all(resultPromises));
+            return Q.all(resultPromises);
         });
-    return deferred.promise;
 }
 
 function requestChromiumCommits() {
     return requestFeed('https://git.chromium.org/gitweb/?p=chromium.git;a=atom;h=refs/heads/trunk').then(function(doc) {
-        return convertChromiumFeed(doc, callback);
+        return convertChromiumFeed(doc);
     });
 }
 
@@ -274,11 +270,8 @@ function promiseXHR(url) {
 function requestBlinkGardeners() {
     var deferred = Q.defer();
     console.log("Getting gardeners...");
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'https://chromium-build.appspot.com/p/chromium/sheriff_webkit.js');
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState == 4) {
-            var js = xhr.responseText;
+    return promiseXHR('https://chromium-build.appspot.com/p/chromium/sheriff_webkit.js')
+        .then(function(js) {
             var match =/document.write\(['"](.*)['"]\)+/.exec(js);
             var resultPromises = [];
             if (match) {
@@ -306,9 +299,6 @@ function requestBlinkGardeners() {
                         resultPromises.push(p);
                     });
             }
-            deferred.resolve(Q.all(resultPromises));
-        }
-    };
-    xhr.send();
-    return deferred.promise;
+            return Q.all(resultPromises);
+        });
 }
