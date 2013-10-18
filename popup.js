@@ -3,7 +3,6 @@ var LOADING_STATUS = {
     haveChromiumQueue: true,
     haveBlinkCommits: true,
     haveBlinkGardeners: true,
-    haveBlinkQueue: true,
     haveBlinkVersion: true,
 };
 var backgroundPage = chrome.extension.getBackgroundPage();
@@ -243,7 +242,7 @@ function setBlinkCommits(blink_feed) {
         var date = new Date(entry.updated);
         var details = $('<div>').addClass('entry-details').appendTo(listItem);
         $('<div class="author">').text(author).appendTo(details);
-        $('<div class="blink-trac">').html(blinkTracLink(entry.svn_id)).appendTo(details);
+        // $('<div class="blink-trac">').html(blinkTracLink(entry.svn_id)).appendTo(details);
         $('<div class="date">').text(date).appendTo(details);
         var title = $("<span>").html(linkify(entry.title));
         title.find("a").attr("target", "_new");
