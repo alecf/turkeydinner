@@ -36,7 +36,7 @@ function refreshAll() {
     for (var k in LOADING_STATUS)
         LOADING_STATUS[k] = false;
     refreshProgress();
-    backgroundPage.refresh(setChromiumCommits);
+    backgroundPage.refresh();
     updateAll();
 }
 
@@ -46,6 +46,7 @@ function updateAll() {
     backgroundPage.buildStatus.chromium_queue.then(setChromiumQueue);
     backgroundPage.buildStatus.chromium_lkgr.then(setChromiumLKGR);
     backgroundPage.buildStatus.blink_gardeners.then(setBlinkGardeners);
+    backgroundPage.buildStatus.chromium_feed.then(setChromiumCommits);
 
 
     Q.all([backgroundPage.buildStatus.versions,
@@ -177,10 +178,6 @@ function setChromiumQueue(queue) {
             .appendTo(span);
     });
     return queue;
-}
-
-function setChromiumCommits(chromium_feed) {
-
 }
 
 function getBlinkNextRoll(gardeners) {
@@ -342,6 +339,10 @@ function setBlinkCommits(blink_feed, blink_version, blink_next_roll) {
     }
 
     refreshProgress();
+}
+
+function setChromiumCommits(chromium_feed) {
+    // nothing to do now...
 }
 
 function setChromiumLKGR(lkgr) {
