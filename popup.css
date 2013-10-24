@@ -25,6 +25,9 @@ body {
 .landed, .closed {
     background-color: #00ee00;
     border-color: #00dd00;
+}
+
+.closed {
     text-decoration: line-through;
 }
 

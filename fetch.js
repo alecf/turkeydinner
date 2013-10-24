@@ -11,7 +11,8 @@ function addRefreshListener(listener) {
 
 function notifyListener(listener) {
     if (buildStatus.blink_version || buildStatus.chromium_blink_version) {
-        listener.onVersionsReady(buildStatus.blink_version, buildStatus.chromium_blink_version);
+        listener.onVersionsReady(buildStatus.blink_version,
+                                 buildStatus.chromium_blink_version);
     }
 
     if (buildStatus.chromium_queue) {

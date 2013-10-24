@@ -1,3 +1,26 @@
+function promiseXHR(url, type) {
+    var deferred = Q.defer();
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url);
+    if (type && type != "xml") {
+        deferred.reject("Bad type: " + type);
+        return deferred.promise;
+    }
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState == 4) {
+            if (!type)
+                deferred.resolve(xhr.responseText);
+            else if (type == "xml")
+                deferred.resolve(xhr.responseXML);
+            else
+                deferred.reject("ASSERT: Bad type");
+        }
+    };
+    xhr.send();
+    return deferred.promise;
+}
+
+
 function requestBlinkVersion() {
     if (chrome.browserAction)
         chrome.browserAction.setBadgeText({"text": "..."});
@@ -22,7 +45,7 @@ function requestBlinkVersion() {
 
 
 function requestChromiumVersionForBlinkRoll(blinkVersion) {
-    return requestFeed('https://git.chromium.org/gitweb/?p=chromium/src.git;a=atom;f=DEPS;h=refs/heads/master')
+    return promiseXHR('https://git.chromium.org/gitweb/?p=chromium/src.git;a=atom;f=DEPS;h=refs/heads/master', 'xml')
         .then(function(feed) {
             var found = null;
             $('entry', feed).each(function(i, entry) {
@@ -69,21 +92,6 @@ function requestChromiumVersionForBlinkRoll(blinkVersion) {
 }
 
 
-function requestFeed(url) {
-    var deferred = Q.defer();
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', url);
-
-  xhr.onreadystatechange = function() {
-      if (xhr.readyState == 4) {
-          // look in the xml, bleah
-          deferred.resolve(xhr.responseXML);
-      }
-  };
-  xhr.send();
-    return deferred.promise;
-}
-
 var status_order = ['mine', 'closed'];
 function sortByStatus(e1, e2) {
     var p1 = status_order.indexOf(e1.status);
@@ -117,13 +125,13 @@ function requestAllChromiumQueues(nick) {
 }
 
 function requestChromiumIssue(id) {
-    return requestFeed('https://codereview.chromium.org/rss/issue/' + id);
+    return promiseXHR('https://codereview.chromium.org/rss/issue/' + id, 'xml');
 }
 
 function requestChromiumQueue(nick, type) {
-    return requestFeed('https://codereview.chromium.org/rss/' + type + '/' + nick)
+    return promiseXHR('https://codereview.chromium.org/rss/' + type + '/' + nick, 'xml')
         .then(function(doc) {
-            var resultPromises = [];
+            var results = [];
             $('entry', doc).each(function (i, entry) {
                 var url = $('link', entry).attr('href');
                 var match = /\/(\d+)\//.exec(url);
@@ -172,17 +180,19 @@ function requestChromiumQueue(nick, type) {
                                 });
                                 return info;
                             });
-                    resultPromises.push(p);
+                    results.push(p);
                 }
             });
-            return Q.all(resultPromises);
+            return Q.all(results);
         });
 }
 
 function requestChromiumCommits() {
-    return requestFeed('https://git.chromium.org/gitweb/?p=chromium.git;a=atom;h=refs/heads/trunk').then(function(doc) {
-        return convertChromiumFeed(doc);
-    });
+    return promiseXHR('https://git.chromium.org/gitweb/?p=chromium.git;a=atom;h=refs/heads/trunk',
+                      'xml')
+        .then(function(doc) {
+            return convertChromiumFeed(doc);
+        });
 }
 
 /**
@@ -232,7 +242,7 @@ function convertBlinkFeed(doc) {
 }
 
 function requestBlinkCommits() {
-    return requestFeed('https://git.chromium.org/gitweb/?p=external/WebKit_trimmed.git;a=atom;h=refs/heads/master')
+    return promiseXHR('http://blink.lc/blink/atom', 'xml')
         .then(convertBlinkFeed);
 }
 
@@ -240,50 +250,39 @@ function requestChromiumLKGR() {
     return promiseXHR('https://chromium-status.appspot.com/lkgr');
 }
 
-function promiseXHR(url) {
-    var deferred = Q.defer();
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', url);
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState == 4) {
-            deferred.resolve(xhr.responseText);
-        }
-    };
-    xhr.send();
-    return deferred.promise;
-}
-
 function requestBlinkGardeners() {
     console.log("Getting gardeners...");
     return promiseXHR('https://chromium-build.appspot.com/p/chromium/sheriff_webkit.js')
         .then(function(js) {
             var match =/document.write\(['"](.*)['"]\)+/.exec(js);
-            var resultPromises = [];
-            if (match) {
-                match[1].split(',').forEach(
-                    function(s) {
-                        var gardener = {nick: s.trim() };
-                        var p = requestChromiumQueue(gardener.nick, 'mine')
-                                .then(function(queue) {
-                                    gardener.queue = [];
-                                    console.log("Checking gardener: ", gardener.nick, queue);
-                                    for (var i = 0; i < queue.length; i++) {
-                                        var roll_match =
-                                                /Roll (blink|blink) (\d+):(\d+)/i.exec(queue[i].summary) ||
-                                                /(blink|blink) roll (\d+):(\d+)/i.exec(queue[i].summary) ||
-                                                /(blink|blink) roll (\d+)-&gt;(\d+)/i.exec(queue[i].summary);
-                                        if (roll_match) {
-                                            queue[i].start = roll_match[2];
-                                            queue[i].end = roll_match[3];
-                                            gardener.queue.push(queue[i]);
-                                        }
+            var results = [];
+            if (!match)
+                return [];
+            var gardeners = match[1].split(',');
+            gardeners.push("eseidel"); //autoroll
+            gardeners.forEach(
+                function(s) {
+                    var gardener = {nick: s.trim() };
+                    var p = requestChromiumQueue(gardener.nick, 'mine')
+                            .then(function(queue) {
+                                gardener.queue = [];
+                                console.log("Checking gardener: ", gardener.nick, queue);
+                                for (var i = 0; i < queue.length; i++) {
+                                    var roll_match =
+                                            /Roll (blink|blink) (\d+):(\d+)/i.exec(queue[i].summary) ||
+                                            /(blink|blink) roll (\d+):(\d+)/i.exec(queue[i].summary) ||
+                                            /(blink|blink) roll (\d+)-&gt;(\d+)/i.exec(queue[i].summary);
+                                    if (roll_match) {
+                                        queue[i].start = roll_match[2];
+                                        queue[i].end = roll_match[3];
+                                        gardener.queue.push(queue[i]);
                                     }
-                                    console.log(gardener.nick + "'s queue: ", gardener.queue);
-                                    return gardener;
-                                });
-                        resultPromises.push(p);
-                    });
-            }
-            return Q.all(resultPromises);
+                                }
+                                console.log(gardener.nick + "'s queue: ", gardener.queue);
+                                return gardener;
+                            });
+                    results.push(p);
+                });
+            return Q.all(results);
         });
 }
