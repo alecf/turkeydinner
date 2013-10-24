@@ -43,7 +43,7 @@ function refreshAll() {
     for (var k in LOADING_STATUS)
         LOADING_STATUS[k] = false;
     refreshProgress();
-    backgroundPage.refresh(setBlinkVersion, setBlinkCommits, setChromiumQueue, setChromiumLKGR, setBlinkGardeners);
+    backgroundPage.refresh(setBlinkVersion, setBlinkCommits, setChromiumCommits, setChromiumQueue, setChromiumLKGR, setBlinkGardeners);
 }
 
 var chart_loaded = false;
@@ -161,14 +161,11 @@ function setChromiumQueue(queue) {
 
 }
 
-function setBlinkCommits(blink_feed) {
-    LOADING_STATUS.haveBlinkCommits = true;
-    var entries = blink_feed.entries;
-    var feedRow = $('#feed-entries');
-    feedRow.empty();
+function setChromiumCommits(chromium_feed) {
 
-    var blink_version = backgroundPage.buildStatus.blink_version;
+}
 
+function getBlinkNextRoll() {
     var gardeners = backgroundPage.buildStatus.blink_gardeners;
     var blink_next_roll = 0;
     if (backgroundPage.buildStatus.blink_gardeners) {
@@ -178,6 +175,18 @@ function setBlinkCommits(blink_feed) {
                 blink_next_roll = Math.max(blink_next_roll, gardener.queue[j].end);
         }
     }
+    return blink_next_roll;
+}
+
+function setBlinkCommits(blink_feed) {
+    LOADING_STATUS.haveBlinkCommits = true;
+    var entries = blink_feed.entries;
+    var feedRow = $('#feed-entries');
+    feedRow.empty();
+
+    var blink_version = backgroundPage.buildStatus.blink_version;
+
+    var blink_next_roll = getBlinkNextRoll();
     var blink_roll_entry;
     var pending = 0;
     var landed = 0;
@@ -192,7 +201,7 @@ function setBlinkCommits(blink_feed) {
     entries.forEach(function(entry, i) {
         var author;
         if (entry.patch_by) {
-            if (entry.author != 'commit-queue@blink.org') {
+            if (entry.author != 'commit-queue@webkit.org') {
                 author = entry.patch_by + " (reviewed by " + entry.author + ")";
             } else {
                 author = entry.patch_by + " (commit-queue)";
@@ -279,7 +288,7 @@ function setBlinkCommits(blink_feed) {
                 entryRow = $('<tr class="rev"><td colspan=' + entry.column + ' style="text-align: right">' + entry.bug + '</td><td>&#8628;</td></tr>');
             }
             entryRow.insertAfter('#chrome-status');
-            $('<a target="turkeydinner-blink-svn">').attr('href', 'https://trac.blink.org/changeset/' + entry.svn_id)
+            $('<a target="turkeydinner-blink-svn">').attr('href', 'https://trac.webkit.org/changeset/' + entry.svn_id)
                 .addClass('landed entry')
                     .text(entry.bug).appendTo(currentLandedDiv);
         });
@@ -308,7 +317,7 @@ function setBlinkCommits(blink_feed) {
             if (i != 0) {
                 $('<span>, </span>').appendTo(currentPendingDiv);
             }
-            $('<a target="turkeydinner-blink-svn">').attr('href', 'https://trac.blink.org/changeset/' + entry.svn_id)
+            $('<a target="turkeydinner-blink-svn">').attr('href', 'https://trac.webkit.org/changeset/' + entry.svn_id)
                 .addClass('pending entry')
                 .attr('title', entry.title)
                 .text(entry.bug).appendTo(currentPendingDiv);

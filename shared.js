@@ -195,6 +195,10 @@ function requestChromiumCommits() {
         });
 }
 
+function convertChromiumFeed(doc) {
+    return $(doc, 'entry');
+}
+
 /**
  * Convert blink commit feed into something useful (read: non-xml) anotated with links/etc
  */

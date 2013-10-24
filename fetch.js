@@ -35,7 +35,7 @@ function notifyListener(listener) {
     listener.onDataReady();
 }
 
-function refresh(version_callback, blink_commit_callback, chromium_callback, chromium_lkgr_callback, blink_gardener_callback) {
+function refresh(version_callback, blink_commit_callback, chromium_commit_callback, chromium_cl_callback, chromium_lkgr_callback, blink_gardener_callback) {
     var email = localStorage.getItem("email");
     var review_nick = localStorage.getItem("review-nick");
     console.log("Updating build status to ", new Date());
@@ -56,20 +56,26 @@ function refresh(version_callback, blink_commit_callback, chromium_callback, chr
         }
     });
     requestBlinkCommits().then(function(feeddata) {
-        console.log("requestBlinkCommits", feeddata);
+        console.log("Got blink commits:", feeddata);
         buildStatus.blink_feed = feeddata;
         if (blink_commit_callback)
             blink_commit_callback(feeddata);
+    });
+    requestChromiumCommits().then(function(feeddata) {
+        console.log("Got chromium commits:", feeddata);
+        buildStatus.chrome_feed = feeddata;
+        if (chrome_commit_callback)
+            chrome_commit_callback(feeddata);
     });
 
     if (review_nick) {
         requestAllChromiumQueues(review_nick).then(function(reviews) {
             buildStatus.chromium_queue = reviews;
-            if (chromium_callback)
-                chromium_callback(reviews);
+            if (chromium_cl_callback)
+                chromium_cl_callback(reviews);
         });
     } else if (chromium_callback) {
-        chromium_callback([]);
+        chromium_cl_callback([]);
     }
 
     requestChromiumLKGR().then(function(lkgr) {
