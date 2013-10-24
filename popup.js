@@ -12,8 +12,6 @@ window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL ||
 
 document.addEventListener('DOMContentLoaded', function() {
 
-    setBlinkGardeners(backgroundPage.buildStatus.blink_gardeners);
-
     updateAll();
     // hook up other event listeners
     $('#refresh-button').click(function() {
@@ -38,7 +36,7 @@ function refreshAll() {
     for (var k in LOADING_STATUS)
         LOADING_STATUS[k] = false;
     refreshProgress();
-    backgroundPage.refresh(setChromiumCommits, setBlinkGardeners);
+    backgroundPage.refresh(setChromiumCommits);
     updateAll();
 }
 
@@ -47,13 +45,19 @@ function updateAll() {
     backgroundPage.buildStatus.versions.then(setBlinkVersion);
     backgroundPage.buildStatus.chromium_queue.then(setChromiumQueue);
     backgroundPage.buildStatus.chromium_lkgr.then(setChromiumLKGR);
+    backgroundPage.buildStatus.blink_gardeners.then(setBlinkGardeners);
+
 
     Q.all([backgroundPage.buildStatus.versions,
-           backgroundPage.buildStatus.blink_feed])
-        .then(function(version_feed) {
-            var versions = version_feed[0];
-            var blink_feed = version_feed[1];
-            setBlinkCommits(blink_feed, versions.blink_version);
+           backgroundPage.buildStatus.blink_feed,
+           backgroundPage.buildStatus.blink_gardeners])
+        .then(function(data) {
+            var versions = data[0];
+            var blink_feed = data[1];
+            var gardeners = data[2];
+            console.log("Aggregate data: ", data);
+            setBlinkCommits(blink_feed, versions.blink_version,
+                            getBlinkNextRoll(gardeners));
         });
 }
 
@@ -179,10 +183,9 @@ function setChromiumCommits(chromium_feed) {
 
 }
 
-function getBlinkNextRoll() {
-    var gardeners = backgroundPage.buildStatus.blink_gardeners;
+function getBlinkNextRoll(gardeners) {
     var blink_next_roll = 0;
-    if (backgroundPage.buildStatus.blink_gardeners) {
+    if (gardeners) {
         for (var i = 0; i < gardeners.length ; i++) {
             var gardener = gardeners[i];
             for (var j = 0; j < gardener.queue.length; j++)
@@ -192,13 +195,12 @@ function getBlinkNextRoll() {
     return blink_next_roll;
 }
 
-function setBlinkCommits(blink_feed, blink_version) {
+function setBlinkCommits(blink_feed, blink_version, blink_next_roll) {
     LOADING_STATUS.haveBlinkCommits = true;
     var entries = blink_feed.entries;
     var feedRow = $('#feed-entries');
     feedRow.empty();
 
-    var blink_next_roll = getBlinkNextRoll();
     var blink_roll_entry;
     var pending = 0;
     var landed = 0;
@@ -353,7 +355,7 @@ function setBlinkGardeners(gardeners) {
     LOADING_STATUS.haveBlinkGardeners = true;
     // console.log("gardeners = ", gardeners);
     if (!gardeners)
-        return;
+        return gardeners;
     var gardenerSpan = $('<span>');
     gardeners.forEach(function(gardener) {
         var max_rev = "";
@@ -380,4 +382,5 @@ function setBlinkGardeners(gardeners) {
         });
     fadeShow($('#blink-gardeners'), gardenerSpan);
     refreshProgress();
+    return gardeners;
 }

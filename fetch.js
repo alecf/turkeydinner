@@ -36,11 +36,8 @@ function refresh(chromium_commit_callback, blink_gardener_callback) {
     buildStatus.chromium_lkgr =
         requestChromiumLKGR();
 
-    requestBlinkGardeners().then(function(gardeners) {
-        buildStatus.blink_gardeners = gardeners;
-        if (blink_gardener_callback)
-            blink_gardener_callback(gardeners);
-    });
+    buildStatus.blink_gardeners =
+        requestBlinkGardeners();
 };
 
 refresh();
