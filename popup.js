@@ -11,15 +11,11 @@ window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL ||
     window.blinkResolveLocalFileSystemURL;
 
 document.addEventListener('DOMContentLoaded', function() {
-    setBlinkVersion(backgroundPage.buildStatus.blink_version,
-                     backgroundPage.buildStatus.chromium_blink_version);
 
-    setChromiumQueue(backgroundPage.buildStatus.chromium_queue);
-
-    setBlinkCommits(backgroundPage.buildStatus.blink_feed);
     setChromiumLKGR(backgroundPage.buildStatus.chromium_lkgr);
     setBlinkGardeners(backgroundPage.buildStatus.blink_gardeners);
 
+    updateAll();
     // hook up other event listeners
     $('#refresh-button').click(function() {
         refreshAll();
@@ -43,7 +39,21 @@ function refreshAll() {
     for (var k in LOADING_STATUS)
         LOADING_STATUS[k] = false;
     refreshProgress();
-    backgroundPage.refresh(setBlinkVersion, setBlinkCommits, setChromiumCommits, setChromiumQueue, setChromiumLKGR, setBlinkGardeners);
+    backgroundPage.refresh(setChromiumCommits, setChromiumLKGR, setBlinkGardeners);
+    updateAll();
+}
+
+// hook up to the latest promises, outstatnding or not.
+function updateAll() {
+    backgroundPage.buildStatus.versions.then(setBlinkVersion);
+    backgroundPage.buildStatus.chromium_queue.then(setChromiumQueue);
+    Q.all([backgroundPage.buildStatus.versions,
+           backgroundPage.buildStatus.blink_feed])
+        .then(function(version_feed) {
+            var versions = version_feed[0];
+            var blink_feed = version_feed[1];
+            setBlinkCommits(blink_feed, versions.blink_version);
+        });
 }
 
 var chart_loaded = false;
@@ -108,13 +118,16 @@ function fadeShow($elmt, text) {
     return $elmt;
 }
 
-function setBlinkVersion(blink_version, chromium_version, initializing) {
-    console.log("setBlinkVersion got ", blink_version, chromium_version);
+function setBlinkVersion(versions) {
+    var blink_version = versions.blink_version;
+    var chromium_blink_version = versions.chromium_blink_version;
+    console.log("setBlinkVersion got ", blink_version, chromium_blink_version);
     LOADING_STATUS.haveBlinkVersion = true;
     fadeShow($('#blink-version'), blink_version);
-    chromium_version = chromium_version || "";
-    fadeShow($('#chromium-blink-version'), chromium_version);
+    chromium_blink_version = chromium_blink_version || "";
+    fadeShow($('#chromium-blink-version'), chromium_blink_version);
     refreshProgress();
+    return versions;
 };
 
 
@@ -129,7 +142,7 @@ function setChromiumQueue(queue) {
         parentDiv.show();
     else {
         parentDiv.hide();
-        return;
+        return queue;
     }
     queue.forEach(function(entry) {
         if (entry.timestamp < oneWeekAgo)
@@ -158,7 +171,7 @@ function setChromiumQueue(queue) {
             .attr('title', title)
             .appendTo(span);
     });
-
+    return queue;
 }
 
 function setChromiumCommits(chromium_feed) {
@@ -178,13 +191,11 @@ function getBlinkNextRoll() {
     return blink_next_roll;
 }
 
-function setBlinkCommits(blink_feed) {
+function setBlinkCommits(blink_feed, blink_version) {
     LOADING_STATUS.haveBlinkCommits = true;
     var entries = blink_feed.entries;
     var feedRow = $('#feed-entries');
     feedRow.empty();
-
-    var blink_version = backgroundPage.buildStatus.blink_version;
 
     var blink_next_roll = getBlinkNextRoll();
     var blink_roll_entry;

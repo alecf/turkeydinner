@@ -35,11 +35,11 @@ function requestBlinkVersion() {
                 if (revision != -1) {
                     var val = line.split(":")[1].split('"')[1];
                     return requestChromiumVersionForBlinkRoll(val).then(function(chromium_version) {
-                        return [val, chromium_version];
+                        return { blink_version: val, chromium_blink_version: chromium_version};
                     });
                 }
             }
-            return ["??", "??"];
+            return {};
         });
 }
 
@@ -107,6 +107,8 @@ function sortChromiumQueue(e1, e2) {
 }
 
 function requestAllChromiumQueues(nick) {
+    if (!nick)
+        return Q.resolve([]);
     return Q.all([
         requestChromiumQueue(nick, 'mine').then(function(mine) {
             mine.forEach(function(entry) { entry.status = 'mine'; });
