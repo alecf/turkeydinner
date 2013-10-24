@@ -12,7 +12,6 @@ window.resolveLocalFileSystemURL = window.resolveLocalFileSystemURL ||
 
 document.addEventListener('DOMContentLoaded', function() {
 
-    setChromiumLKGR(backgroundPage.buildStatus.chromium_lkgr);
     setBlinkGardeners(backgroundPage.buildStatus.blink_gardeners);
 
     updateAll();
@@ -39,7 +38,7 @@ function refreshAll() {
     for (var k in LOADING_STATUS)
         LOADING_STATUS[k] = false;
     refreshProgress();
-    backgroundPage.refresh(setChromiumCommits, setChromiumLKGR, setBlinkGardeners);
+    backgroundPage.refresh(setChromiumCommits, setBlinkGardeners);
     updateAll();
 }
 
@@ -47,6 +46,8 @@ function refreshAll() {
 function updateAll() {
     backgroundPage.buildStatus.versions.then(setBlinkVersion);
     backgroundPage.buildStatus.chromium_queue.then(setChromiumQueue);
+    backgroundPage.buildStatus.chromium_lkgr.then(setChromiumLKGR);
+
     Q.all([backgroundPage.buildStatus.versions,
            backgroundPage.buildStatus.blink_feed])
         .then(function(version_feed) {
@@ -341,10 +342,11 @@ function setBlinkCommits(blink_feed, blink_version) {
     refreshProgress();
 }
 
-function setChromiumLKGR(lkgr, initializing) {
+function setChromiumLKGR(lkgr) {
     LOADING_STATUS.haveChromiumLKGR = true;
     console.log("LKGR = ", lkgr);
     fadeShow($('#chromium-lkgr'), lkgr);
+    return lkgr;
 }
 
 function setBlinkGardeners(gardeners) {
