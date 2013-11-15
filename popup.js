@@ -293,6 +293,8 @@ function setBlinkCommits(blink_feed, blink_version, blink_next_roll) {
         var currentLandedDiv = $('.current-landed').empty();
         currentLanded.forEach(function(entry, i) {
             var entryRow;
+            if (!entry.bug)
+                console.log("No bug for .", entry);
             if (entry.column < pending) {
                 entryRow = $('<tr class="rev"><td colspan=' + entry.column + '"></td><td>&#8595;</td><td colspan=10>' + entry.bug + '</td></td></tr>');
             } else {
@@ -319,6 +321,8 @@ function setBlinkCommits(blink_feed, blink_version, blink_next_roll) {
         var currentPendingDiv = $('.current-pending').empty();
         currentPending.forEach(function(entry, i) {
             var entryRow;
+            if (!entry.bug)
+                console.log("No bug again for ", entry);
             if (entry.column < pending) {
                 entryRow = $('<tr class="rev"><td colspan=' + entry.column + '"></td><td>&#8595;</td><td colspan=10>' + entry.bug + '</td></tr>');
             } else {

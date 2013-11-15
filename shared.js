@@ -140,8 +140,10 @@ function requestChromiumQueue(nick, type) {
                 if (match) {
                     var summary = $('summary', entry).text();
                     var id = match[1];
-                    var info = { id: id, summary: summary.trim().split('\n')[0], type: type };
-                    var bugmatch = /BUG=(\d+)/.exec(summary);
+                    var info = { id: id,
+                                 summary: summary.trim().split('\n')[0],
+                                 type: type };
+                    var bugmatch = /BUG=(\d+)/g.exec(summary);
                     if (bugmatch)
                         info.bug = bugmatch[1];
                     var p = requestChromiumIssue(id)
@@ -214,11 +216,18 @@ function convertBlinkFeed(doc) {
         updated: $('updated:first', this).text()
       };
 
+        console.log("Processing: ", this);
+
       var time = $('updated', this).text();
 
-      var bug = /bugs.blink.org\/show_bug.cgi\?id=(\d+)/g.exec(text);
+        // this is crappy, these bugs could be in any bug system:
+      var bug = /bugs.webkit.org\/show_bug.cgi\?id=(\d+)/g.exec(text);
       if (bug) {
-        entry.bug = bug[1];
+          entry.bug = bug[1];
+      } else if ((bug = /\nBUG=(\d+)/g.exec(text))) {
+          entry.bug = bug[1];
+      } else if ((bug = /Review URL: .*\/(\d+)/.exec(text))) {
+          entry.bug = bug[1];
       }
 
       var svn_id = /git-svn-id:.*@(\d+) /g.exec(text);
@@ -237,8 +246,9 @@ function convertBlinkFeed(doc) {
       }
 
       entry.title = $('title:first', this).text();
+        console.log("creating entry for ", entry.title);
       var title_end = text.indexOf("\n\n");
-      if (title_end) {
+      if (title_end != -1) {
         entry.title = text.slice(0, title_end).trim();
       }
       entries.push(entry);
