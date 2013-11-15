@@ -49,13 +49,13 @@ function updateAll() {
     backgroundPage.buildStatus.chromium_feed.then(setChromiumCommits);
 
 
-    Q.all([backgroundPage.buildStatus.versions,
-           backgroundPage.buildStatus.blink_feed,
-           backgroundPage.buildStatus.blink_gardeners])
+    Q.allSettled([backgroundPage.buildStatus.versions,
+                  backgroundPage.buildStatus.blink_feed,
+                  backgroundPage.buildStatus.blink_gardeners])
         .then(function(data) {
-            var versions = data[0];
-            var blink_feed = data[1];
-            var gardeners = data[2];
+            var versions = data[0].state == 'fulfilled' ? data[0].value : {};
+            var blink_feed = data[1].state == 'fulfilled' ? data[1].value : [];
+            var gardeners = data[2].state == 'fulfilled' ? data[2].value : [];
             console.log("Aggregate data: ", data);
             setBlinkCommits(blink_feed, versions.blink_version,
                             getBlinkNextRoll(gardeners));

@@ -36,7 +36,7 @@ function refresh() {
     buildStatus.blink_gardeners = requestBlinkGardeners();
 
     refreshing = true;
-    current_refresh = Q.all([
+    current_refresh = Q.allSettled([
         buildStatus.versions,
         buildStatus.blink_feed,
         buildStatus.chromium_feed,
@@ -45,6 +45,7 @@ function refresh() {
         buildStatus.blink_gardeners])
         .then(function(result) {
             refreshing = false;
+            return result;
         });
     return current_refresh;
 };
