@@ -20,6 +20,31 @@ function promiseXHR(url, type) {
     return deferred.promise;
 }
 
+// converts the results of Q.allSettled into only successes, or a successes plus a
+function filter_settled(make_default) {
+    if (make_default)
+        return function(results) {
+            var actual_results = [];
+            for (var i = 0; i < results.length; ++i) {
+                if (results[i].state == 'fulfilled')
+                    actual_results.push(results[i].value);
+                else
+                    actual_results.push(make_default(results[i], i), i);
+            }
+            return actual_results;
+        };
+
+    // no factory, just leave them out
+    return function(results) {
+        var actual_results = [];
+        for (var i = 0; i < results; ++i) {
+            if (results[i].state == 'fulfilled')
+                actual_results.push(results[i].value);
+        }
+        return actual_results;
+    };
+}
+
 
 function requestBlinkVersion() {
     if (chrome.browserAction)
@@ -109,7 +134,7 @@ function sortChromiumQueue(e1, e2) {
 function requestAllChromiumQueues(nick) {
     if (!nick)
         return Q.resolve([]);
-    return Q.all([
+    return Q.allSettled([
         requestChromiumQueue(nick, 'mine').then(function(mine) {
             mine.forEach(function(entry) { entry.status = 'mine'; });
             return mine;
@@ -118,12 +143,14 @@ function requestAllChromiumQueues(nick) {
             closed.forEach(function(entry) { entry.status = 'closed'; });
             return closed;
         })
-    ]).then(function(entries) {
-        var full_list = entries[0].concat(entries[1]);
-        console.log("DONE with " + nick + "'s chromium queue: ", full_list);
-        full_list.sort(sortChromiumQueue);
-        return full_list;
-    });
+    ])
+        .then(filter_settled(function(r) { console.log("Broken queue: ", r); return []; }))
+        .then(function(entries) {
+            var full_list = entries[0].concat(entries[1]);
+            console.log("DONE with " + nick + "'s chromium queue: ", full_list);
+            full_list.sort(sortChromiumQueue);
+            return full_list;
+        });
 }
 
 function requestChromiumIssue(id) {
@@ -140,8 +167,10 @@ function requestChromiumQueue(nick, type) {
                 if (match) {
                     var summary = $('summary', entry).text();
                     var id = match[1];
-                    var info = { id: id, summary: summary.trim().split('\n')[0], type: type };
-                    var bugmatch = /BUG=(\d+)/.exec(summary);
+                    var info = { id: id,
+                                 summary: summary.trim().split('\n')[0],
+                                 type: type };
+                    var bugmatch = /BUG=(\d+)/g.exec(summary);
                     if (bugmatch)
                         info.bug = bugmatch[1];
                     else
@@ -187,7 +216,8 @@ function requestChromiumQueue(nick, type) {
                     results.push(p);
                 }
             });
-            return Q.all(results);
+            return Q.allSettled(results)
+                .then(filter_settled(function(r) { return { id: "???", summary: r.reason }; }));
         });
 }
 
@@ -218,11 +248,15 @@ function convertBlinkFeed(doc) {
 
       var time = $('updated', this).text();
 
-      var bug = /bugs.blink.org\/show_bug.cgi\?id=(\d+)/g.exec(text);
-      if (bug)
+        // this is crappy, these bugs could be in any bug system:
+      var bug = /bugs.webkit.org\/show_bug.cgi\?id=(\d+)/g.exec(text);
+      if (bug) {
           entry.bug = bug[1];
-        else
-          entry.bug = "???";
+      } else if ((bug = /\nBUG=(\d+)/g.exec(text))) {
+          entry.bug = bug[1];
+      } else if ((bug = /Review URL: .*\/(\d+)/.exec(text))) {
+          entry.bug = bug[1];
+      }
 
       var svn_id = /git-svn-id:.*@(\d+) /g.exec(text);
       if (svn_id) {
@@ -292,6 +326,6 @@ function requestBlinkGardeners() {
                             });
                     results.push(p);
                 });
-            return Q.all(results);
+            return Q.allSettled(results).then(filter_settled());
         });
 }

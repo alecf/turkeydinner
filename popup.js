@@ -49,13 +49,13 @@ function updateAll() {
     backgroundPage.buildStatus.chromium_feed.then(setChromiumCommits);
 
 
-    Q.all([backgroundPage.buildStatus.versions,
-           backgroundPage.buildStatus.blink_feed,
-           backgroundPage.buildStatus.blink_gardeners])
+    Q.allSettled([backgroundPage.buildStatus.versions,
+                  backgroundPage.buildStatus.blink_feed,
+                  backgroundPage.buildStatus.blink_gardeners])
         .then(function(data) {
-            var versions = data[0];
-            var blink_feed = data[1];
-            var gardeners = data[2];
+            var versions = data[0].state == 'fulfilled' ? data[0].value : {};
+            var blink_feed = data[1].state == 'fulfilled' ? data[1].value : [];
+            var gardeners = data[2].state == 'fulfilled' ? data[2].value : [];
             console.log("Aggregate data: ", data);
             setBlinkCommits(blink_feed, versions.blink_version,
                             getBlinkNextRoll(gardeners));
@@ -293,6 +293,8 @@ function setBlinkCommits(blink_feed, blink_version, blink_next_roll) {
         var currentLandedDiv = $('.current-landed').empty();
         currentLanded.forEach(function(entry, i) {
             var entryRow;
+            if (!entry.bug)
+                console.log("No bug for .", entry);
             if (entry.column < pending) {
                 entryRow = $('<tr class="rev"><td colspan=' + entry.column + '"></td><td>&#8595;</td><td colspan=10>' + entry.bug + '</td></td></tr>');
             } else {
@@ -319,6 +321,8 @@ function setBlinkCommits(blink_feed, blink_version, blink_next_roll) {
         var currentPendingDiv = $('.current-pending').empty();
         currentPending.forEach(function(entry, i) {
             var entryRow;
+            if (!entry.bug)
+                console.log("No bug again for ", entry);
             if (entry.column < pending) {
                 entryRow = $('<tr class="rev"><td colspan=' + entry.column + '"></td><td>&#8595;</td><td colspan=10>' + entry.bug + '</td></tr>');
             } else {
