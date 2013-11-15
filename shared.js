@@ -144,6 +144,8 @@ function requestChromiumQueue(nick, type) {
                     var bugmatch = /BUG=(\d+)/.exec(summary);
                     if (bugmatch)
                         info.bug = bugmatch[1];
+                    else
+                        info.bug = '???';
                     var p = requestChromiumIssue(id)
                             .then(function(doc) {
                                 var lastCQindex = -1;
@@ -217,9 +219,10 @@ function convertBlinkFeed(doc) {
       var time = $('updated', this).text();
 
       var bug = /bugs.blink.org\/show_bug.cgi\?id=(\d+)/g.exec(text);
-      if (bug) {
-        entry.bug = bug[1];
-      }
+      if (bug)
+          entry.bug = bug[1];
+        else
+          entry.bug = "???";
 
       var svn_id = /git-svn-id:.*@(\d+) /g.exec(text);
       if (svn_id) {
@@ -238,7 +241,7 @@ function convertBlinkFeed(doc) {
 
       entry.title = $('title:first', this).text();
       var title_end = text.indexOf("\n\n");
-      if (title_end) {
+      if (title_end != -1) {
         entry.title = text.slice(0, title_end).trim();
       }
       entries.push(entry);
